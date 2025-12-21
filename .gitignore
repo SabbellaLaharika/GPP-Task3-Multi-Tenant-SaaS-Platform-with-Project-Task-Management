@@ -1,0 +1,150 @@
+# ===================================
+# DEPENDENCIES
+# ===================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# ===================================
+# ENVIRONMENT VARIABLES
+# ===================================
+# Note: .env files are tracked for evaluation
+# In production, these should NOT be committed
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.backup
+
+# ===================================
+# BUILD OUTPUTS
+# ===================================
+backend/dist/
+backend/build/
+frontend/build/
+frontend/dist/
+frontend/.next/
+frontend/out/
+build/
+dist/
+
+# ===================================
+# LOGS
+# ===================================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# ===================================
+# TESTING
+# ===================================
+coverage/
+*.lcov
+.nyc_output/
+.grunt
+lib-cov
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+.cache
+
+# ===================================
+# IDE & EDITORS
+# ===================================
+.vscode/
+.vscode-test
+.idea/
+*.swp
+*.swo
+*.swn
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+.project
+.settings/
+.classpath
+
+# ===================================
+# DATABASE
+# ===================================
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+postgres-data/
+pgdata/
+
+# ===================================
+# DOCKER
+# ===================================
+docker-compose.override.yml
+.dockerignore.bak
+*.dockerfile.bak
+
+# ===================================
+# TEMPORARY FILES
+# ===================================
+tmp/
+temp/
+*.tmp
+*.bak
+*.backup
+.temp/
+.cache/
+.parcel-cache/
+
+# ===================================
+# OS GENERATED
+# ===================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# ===================================
+# REACT & FRONTEND SPECIFIC
+# ===================================
+.eslintcache
+.env.production
+.vercel
+.turbo
+
+# ===================================
+# MISC
+# ===================================
+*.pem
+*.key
+*.cert
+*.crt
+.npmrc
+.yarnrc
+
+# ===================================
+# DOCUMENTATION ARTIFACTS
+# (Keep these tracked for submission)
+# ===================================
+# docs/ should be tracked
+# docs/images/ should be tracked
