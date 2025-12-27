@@ -39,7 +39,8 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
-
+const healthRoutes = require('./routes/healthRoutes');
+app.use('/api', healthRoutes);
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/tenants', tenantRoutes);
@@ -52,5 +53,6 @@ app.use(notFoundHandler);
 
 // Error handler (must be last)
 app.use(errorHandler);
+
 
 module.exports = app;
