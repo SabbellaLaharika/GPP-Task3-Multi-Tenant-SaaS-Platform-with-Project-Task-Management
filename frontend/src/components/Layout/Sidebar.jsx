@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { FiHome, FiFolderPlus, FiUsers, FiSettings } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 
+
 const Sidebar = ({ isOpen }) => {
   const { user, isTenantAdmin } = useAuth();
 

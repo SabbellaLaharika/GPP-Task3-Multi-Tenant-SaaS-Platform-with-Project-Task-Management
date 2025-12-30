@@ -75,7 +75,6 @@ const Login = () => {
               onChange={handleChange}
               placeholder="your-company"
               icon={FiGlobe}
-              required
             />
 
             <Button

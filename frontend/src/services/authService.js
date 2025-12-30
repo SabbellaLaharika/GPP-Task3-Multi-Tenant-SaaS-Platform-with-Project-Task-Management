@@ -6,6 +6,8 @@ const authService = {
     if (response.data.data.token) {
       localStorage.setItem('token', response.data.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.data.user));
+      localStorage.setItem('tenantId', response.data.data.tenantId);
+      localStorage.setItem('subdomain', response.data.data.tenantSubdomain);
     }
     return response.data;
   },
@@ -15,6 +17,9 @@ const authService = {
     if (response.data.data.token) {
       localStorage.setItem('token', response.data.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.data.user));
+      localStorage.setItem('tenantId', response.data.data.tenantId);
+      console.log(response.data.data.tenantId);
+      localStorage.setItem('subdomain', response.data.data.tenantSubdomain);
     }
     return response.data;
   },
@@ -25,6 +30,8 @@ const authService = {
     } finally {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      localStorage.removeItem('tenantId');
+      localStorage.removeItem('subdomain');
     }
   },
 
@@ -34,6 +41,11 @@ const authService = {
       localStorage.setItem('user', JSON.stringify(response.data.data));
     }
     return response.data;
+  },
+
+   getTenantId: () => {
+    const user = authService.getStoredUser();
+    return user?.tenantId || localStorage.getItem('tenantId');
   },
 
   getStoredUser: () => {

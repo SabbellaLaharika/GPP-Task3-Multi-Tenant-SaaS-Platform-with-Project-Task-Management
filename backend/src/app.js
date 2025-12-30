@@ -10,6 +10,7 @@ const tenantRoutes = require('./routes/tenantRoutes');
 const userRoutes = require('./routes/userRoutes');
 const projectRoutes = require('./routes/projectRoutes');
 const taskRoutes = require('./routes/taskRoutes');
+const dashboardRoutes = require('./routes/dashboardRoutes');
 
 const app = express();
 
@@ -47,7 +48,7 @@ app.use('/api/tenants', tenantRoutes);
 app.use('/api', userRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api', taskRoutes);
-
+app.use('/api/dashboard', dashboardRoutes);
 // 404 handler
 app.use(notFoundHandler);
 

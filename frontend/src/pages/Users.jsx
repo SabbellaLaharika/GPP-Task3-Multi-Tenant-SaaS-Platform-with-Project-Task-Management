@@ -50,6 +50,13 @@ const Users = () => {
     }
   };
 
+  const handleUpdateUser = async (e) => {
+    e.preventDefault();
+    await userService.update(editingUser.id, formData);
+    toast.success('User updated');
+    fetchUsers();
+  };
+
   const handleDelete = async (userId) => {
     try {
       await userService.delete(userId);
