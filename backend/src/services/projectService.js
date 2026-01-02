@@ -169,9 +169,50 @@ const deleteProject = async (projectId, tenantId) => {
   }
 };
 
+const getProjects = async (tenantId, filters = {}) => {
+  const { status, search, sortBy = 'created_at', order = 'DESC' } = filters;
+  
+  let query = `
+    SELECT 
+      p.*,
+      COUNT(DISTINCT t.id) as task_count,
+      COUNT(DISTINCT CASE WHEN t.status = 'completed' THEN t.id END) as completed_tasks
+    FROM projects p
+    LEFT JOIN tasks t ON p.id = t.project_id
+    WHERE p.tenant_id = $1
+  `;
+  
+  const params = [tenantId];
+  let paramCount = 1;
+
+  if (status) {
+    paramCount++;
+    query += ` AND p.status = $${paramCount}`;
+    params.push(status);
+  }
+
+  if (search) {
+    paramCount++;
+    query += ` AND (p.name ILIKE $${paramCount} OR p.description ILIKE $${paramCount})`;
+    params.push(`%${search}%`);
+  }
+
+  query += ` GROUP BY p.id`;
+  query += ` ORDER BY p.${sortBy} ${order}`;
+
+  try {
+    const result = await pool.query(query, params);
+    return result.rows;
+  } catch (error) {
+    throw new Error(`Database error: ${error.message}`);
+  }
+};
+
+
 module.exports = {
   createProject,
   listProjects,
   updateProject,
   deleteProject,
+  getProjects,
 };

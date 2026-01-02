@@ -155,6 +155,7 @@ const schemas = {
     assignedTo: { required: false, type: 'string' },
     dueDate: { required: false, type: 'string' },
   },
+
 };
 
 module.exports = {

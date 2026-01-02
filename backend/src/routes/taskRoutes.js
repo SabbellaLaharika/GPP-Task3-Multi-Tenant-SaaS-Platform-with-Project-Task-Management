@@ -9,5 +9,5 @@ router.post('/projects/:projectId/tasks', authenticate, tenantFilter, validate(s
 router.get('/projects/:projectId/tasks', authenticate, tenantFilter, taskController.listProjectTasks);
 router.patch('/tasks/:taskId/status', authenticate, tenantFilter, taskController.updateTaskStatus);
 router.put('/tasks/:taskId', authenticate, tenantFilter, validate(schemas.updateTask), taskController.updateTask);
-
+router.delete('/tasks/:taskId', authenticate, tenantFilter, taskController.deleteTask);
 module.exports = router;

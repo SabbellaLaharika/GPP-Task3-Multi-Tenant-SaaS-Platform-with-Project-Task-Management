@@ -215,9 +215,29 @@ const updateTask = async (taskId, updateData, tenantId) => {
   }
 };
 
+const deleteTask = async (taskId, tenantId, assigned_to) => {
+  try {
+    const result = await pool.query(
+      'DELETE FROM tasks WHERE id = $1 AND tenant_id = $2 RETURNING id',
+      [taskId, tenantId]
+    );
+
+    if (result.rows.length === 0) {
+      throw new Error('Task not found');
+    }
+
+    logger.info('Task deleted', { taskId });
+    return { success: true, message: 'Task deleted successfully' };
+  } catch (error) {
+    logger.error('Delete task failed', { error: error.message });
+    throw error;
+  }
+};
+
 module.exports = {
   createTask,
   listProjectTasks,
   updateTaskStatus,
   updateTask,
+  deleteTask,
 };

@@ -61,9 +61,31 @@ const updateTask = async (req, res, next) => {
   }
 };
 
+const deleteTask = async (req, res) => {
+  try {
+    await taskService.deleteTask(
+      req.params.taskId,
+      req.tenantId,
+      req.params.assignedto,
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Task deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete task error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete task',
+      error: error.message
+    });
+  }
+};
 module.exports = {
   createTask,
   listProjectTasks,
   updateTaskStatus,
   updateTask,
+  deleteTask,
 };
