@@ -6,8 +6,9 @@ const authService = {
     if (response.data.data.token) {
       localStorage.setItem('token', response.data.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.data.user));
-      localStorage.setItem('tenantId', response.data.data.tenantId);
-      localStorage.setItem('subdomain', response.data.data.tenantSubdomain);
+      localStorage.setItem('tenantId',response.data.data.user?.tenantId || response.data.data.tenantId
+);
+
     }
     return response.data;
   },
@@ -17,9 +18,7 @@ const authService = {
     if (response.data.data.token) {
       localStorage.setItem('token', response.data.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.data.user));
-      localStorage.setItem('tenantId', response.data.data.tenantId);
-      console.log(response.data.data.tenantId);
-      localStorage.setItem('subdomain', response.data.data.tenantSubdomain);
+      localStorage.setItem('tenantId', response.data.data.user.tenantId);
     }
     return response.data;
   },
@@ -37,8 +36,24 @@ const authService = {
 
   getCurrentUser: async () => {
     const response = await api.get('/api/auth/me');
+
     if (response.data.data) {
-      localStorage.setItem('user', JSON.stringify(response.data.data));
+      const apiUser = response.data.data;
+
+      const normalizedUser = {
+        id: apiUser.id,
+        email: apiUser.email,
+        fullName: apiUser.fullName,
+        role: apiUser.role,
+        isActive: apiUser.isActive,
+        tenantId: apiUser.tenant?.id || null, 
+        tenant: apiUser.tenant || null,
+      };
+
+      localStorage.setItem('user', JSON.stringify(normalizedUser));
+      localStorage.setItem('tenantId', normalizedUser.tenantId);
+
+      return { data: normalizedUser };
     }
     return response.data;
   },

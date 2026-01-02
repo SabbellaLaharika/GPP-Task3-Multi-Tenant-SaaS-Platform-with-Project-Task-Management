@@ -9,8 +9,10 @@ import Loading from '../components/Common/Loading';
 import ConfirmDialog from '../components/Common/ConfirmDialog';
 import { formatDate } from '../utils/helpers';
 import toast from 'react-hot-toast';
+import { useParams } from 'react-router-dom';
 
 const Users = () => {
+  const { id } = useParams();
   const { user } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,10 +36,11 @@ const Users = () => {
 
   useEffect(() => {
     loadUsers();
-  }, []);
+}, [user,id]);
 
   const loadUsers = async () => {
     try {
+      setLoading(true);
       const response = await userService.getAllByTenant(user.tenantId);
       setUsers(response.data.users);
     } catch (error) {
