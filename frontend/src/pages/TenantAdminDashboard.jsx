@@ -1,9 +1,8 @@
-import { useState, useEffect, useContext } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import projectService from '../services/projectService';
 import tenantService from '../services/tenantService';
-import { getDashboardStats } from '../services/dashboardService';
+import { getDashboardStats} from '../services/dashboardService';
 import toast from 'react-hot-toast';
 import { 
   FaProjectDiagram, 
@@ -12,11 +11,13 @@ import {
   FaClock,
   FaUsers,
   FaArrowRight,
-  FaChartLine
+  FaChartLine,
+  FaCog
 } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
 
-const RegularDashboard = () => {
-  const { user } = useAuth();
+const TenantAdminDashboard = () => {
+  const { user, tenantId } = useAuth();
   const [projects, setProjects] = useState([]);
   const [tenantInfo, setTenantInfo] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -25,7 +26,7 @@ const RegularDashboard = () => {
     totalTasks: 0,
     completedTasks: 0,
     pendingTasks: 0,
-    totalUsers: 0 
+    totalUsers: 0
   });
 
   useEffect(() => {
@@ -39,15 +40,15 @@ const RegularDashboard = () => {
       // Fetch projects
       const projectsResponse = await projectService.getAll();
       const projectsList = projectsResponse.data.projects || [];
-      setProjects(projectsList.slice(0, 5)); // Show only recent 5
+      setProjects(projectsList.slice(0, 5));
       
       // Fetch tenant info
-      if (user?.tenantId) {
-        const tenantResponse = await tenantService.getDetails(user.tenantId);
+      if (tenantId) {
+        const tenantResponse = await tenantService.getDetails(tenantId);
         setTenantInfo(tenantResponse.data);
       }
       
-
+      // Fetch real statistics
       const statsResponse = await getDashboardStats();
       setStats({
         totalProjects: statsResponse.data.totalProjects,
@@ -76,21 +77,31 @@ const RegularDashboard = () => {
     <div className="min-h-screen bg-gray-50 p-6">
       {/* Welcome Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800">
-          {getGreeting()}, {user?.fullName}! 👋
-        </h1>
-        <p className="text-gray-600 mt-2">
-          Here's what's happening with your projects today
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800">
+              {getGreeting()}, {user?.fullName}! 👋
+            </h1>
+            <p className="text-gray-600 mt-2">
+              Organization Admin Dashboard - Manage your team and projects
+            </p>
+          </div>
+          <Link 
+            to="/settings"
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          >
+            <FaCog /> Organization Settings
+          </Link>
+        </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {/* Total Projects - REAL DATA */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        {/* Total Projects */}
         <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-500 text-sm font-medium">Total Projects</p>
+              <p className="text-gray-500 text-sm font-medium">Projects</p>
               <p className="text-3xl font-bold text-gray-800 mt-2">{stats.totalProjects}</p>
             </div>
             <div className="bg-blue-100 p-3 rounded-full">
@@ -101,15 +112,15 @@ const RegularDashboard = () => {
             to="/projects" 
             className="text-blue-600 text-sm mt-4 inline-flex items-center gap-1 hover:gap-2 transition-all"
           >
-            View all <FaArrowRight />
+            Manage <FaArrowRight />
           </Link>
         </div>
 
-        {/* Total Tasks - REAL DATA */}
+        {/* Total Tasks */}
         <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-purple-500 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-500 text-sm font-medium">Total Tasks</p>
+              <p className="text-gray-500 text-sm font-medium">Tasks</p>
               <p className="text-3xl font-bold text-gray-800 mt-2">{stats.totalTasks}</p>
             </div>
             <div className="bg-purple-100 p-3 rounded-full">
@@ -119,7 +130,7 @@ const RegularDashboard = () => {
           <p className="text-gray-600 text-sm mt-4">Across all projects</p>
         </div>
 
-        {/* Completed Tasks - REAL DATA */}
+        {/* Completed Tasks */}
         <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-500 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between">
             <div>
@@ -142,12 +153,12 @@ const RegularDashboard = () => {
             <p className="text-xs text-gray-500 mt-1">
               {stats.totalTasks > 0 
                 ? ((stats.completedTasks / stats.totalTasks) * 100).toFixed(0) 
-                : 0}% completion rate
+                : 0}% complete
             </p>
           </div>
         </div>
 
-        {/* Pending Tasks - REAL DATA */}
+        {/* Pending Tasks */}
         <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-orange-500 hover:shadow-lg transition-shadow">
           <div className="flex items-center justify-between">
             <div>
@@ -160,14 +171,39 @@ const RegularDashboard = () => {
           </div>
           <p className="text-orange-600 text-sm mt-4 font-medium">Needs attention</p>
         </div>
+
+        {/* Total Users */}
+        <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-indigo-500 hover:shadow-lg transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-500 text-sm font-medium">Team Members</p>
+              <p className="text-3xl font-bold text-gray-800 mt-2">{stats.totalUsers}</p>
+            </div>
+            <div className="bg-indigo-100 p-3 rounded-full">
+              <FaUsers className="text-2xl text-indigo-600" />
+            </div>
+          </div>
+          <Link 
+            to="/users" 
+            className="text-indigo-600 text-sm mt-4 inline-flex items-center gap-1 hover:gap-2 transition-all"
+          >
+            Manage <FaArrowRight />
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Projects */}
         <div className="lg:col-span-2">
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-4">
+            <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-4 flex justify-between items-center">
               <h2 className="text-xl font-bold text-white">Recent Projects</h2>
+              <Link 
+                to="/projects"
+                className="text-white hover:text-gray-200 text-sm flex items-center gap-1"
+              >
+                View All <FaArrowRight />
+              </Link>
             </div>
             
             {loading ? (
@@ -221,17 +257,6 @@ const RegularDashboard = () => {
                     </div>
                   </Link>
                 ))}
-              </div>
-            )}
-            
-            {projects.length > 0 && (
-              <div className="px-6 py-4 bg-gray-50 border-t">
-                <Link 
-                  to="/projects" 
-                  className="text-blue-600 hover:text-blue-700 font-medium flex items-center gap-2"
-                >
-                  View all projects <FaArrowRight />
-                </Link>
               </div>
             )}
           </div>
@@ -295,14 +320,12 @@ const RegularDashboard = () => {
                 </div>
               </div>
               
-              {user?.role === 'tenant_admin' && (
-                <Link 
-                  to="/settings" 
-                  className="mt-4 block text-center bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded transition-colors"
-                >
-                  Manage Settings
-                </Link>
-              )}
+              <Link 
+                to="/settings" 
+                className="mt-4 block text-center bg-blue-600 hover:bg-blue-700 text-white py-2 rounded transition-colors"
+              >
+                Manage Organization
+              </Link>
             </div>
           )}
 
@@ -317,7 +340,7 @@ const RegularDashboard = () => {
                 <div className="bg-blue-100 p-2 rounded group-hover:bg-blue-200">
                   <FaProjectDiagram className="text-blue-600" />
                 </div>
-                <span className="font-medium text-gray-700">View Projects</span>
+                <span className="font-medium text-gray-700">Manage Projects</span>
               </Link>
               
               <Link
@@ -329,7 +352,25 @@ const RegularDashboard = () => {
                 </div>
                 <span className="font-medium text-gray-700">Manage Users</span>
               </Link>
+
+              <Link
+                to="/settings"
+                className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+              >
+                <div className="bg-gray-100 p-2 rounded group-hover:bg-gray-200">
+                  <FaCog className="text-gray-600" />
+                </div>
+                <span className="font-medium text-gray-700">Settings</span>
+              </Link>
             </div>
+          </div>
+
+          {/* Admin Badge */}
+          <div className="bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg shadow-md p-6 text-white">
+            <h3 className="text-lg font-bold mb-2">Admin Access</h3>
+            <p className="text-sm text-purple-100">
+              You have full control over your organization's projects, users, and settings.
+            </p>
           </div>
         </div>
       </div>
@@ -337,4 +378,4 @@ const RegularDashboard = () => {
   );
 };
 
-export default RegularDashboard;
+export default TenantAdminDashboard;
