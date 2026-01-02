@@ -15,9 +15,22 @@ const Users = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
-  const [newUser, setNewUser] = useState({ email: '', password: '', fullName: '', role: 'user' });
+  const [editingUser, setEditingUser] = useState(null);
+  const [newUser, setNewUser] = useState({ 
+    email: '', 
+    password: '', 
+    fullName: '', 
+    role: 'user' 
+  });
+  const [formData, setFormData] = useState({
+    fullName: '',
+    role: '',
+    isActive: true
+  });
   const [creating, setCreating] = useState(false);
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     loadUsers();
@@ -50,11 +63,32 @@ const Users = () => {
     }
   };
 
+  // OPEN EDIT MODAL WITH USER DATA
+  const handleEditClick = (userToEdit) => {
+    setEditingUser(userToEdit);
+    setFormData({
+      fullName: userToEdit.full_name,
+      role: userToEdit.role,
+      isActive: userToEdit.is_active
+    });
+    setShowEditModal(true);
+  };
+
+  // UPDATE USER HANDLER
   const handleUpdateUser = async (e) => {
     e.preventDefault();
-    await userService.update(editingUser.id, formData);
-    toast.success('User updated');
-    fetchUsers();
+    setUpdating(true);
+    try {
+      await userService.update(editingUser.id, formData);
+      toast.success('User updated successfully!');
+      setShowEditModal(false);
+      setEditingUser(null);
+      loadUsers();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update user');
+    } finally {
+      setUpdating(false);
+    }
   };
 
   const handleDelete = async (userId) => {
@@ -109,15 +143,27 @@ const Users = () => {
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${u.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    u.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                  }`}>
                     {u.is_active ? 'Active' : 'Inactive'}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{formatDate(u.created_at)}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-right">
+                  {/* EDIT BUTTON */}
+                  <button
+                    onClick={() => handleEditClick(u)}
+                    className="text-blue-600 hover:text-blue-800"
+                    title="Edit user"
+                  >
+                    <FiEdit2 className="w-4 h-4" />
+                  </button>
+                  {/* DELETE BUTTON */}
                   <button
                     onClick={() => setDeleteConfirm(u)}
                     className="text-red-600 hover:text-red-800 ml-3"
+                    title="Delete user"
                   >
                     <FiTrash2 className="w-4 h-4" />
                   </button>
@@ -129,7 +175,11 @@ const Users = () => {
       </div>
 
       {/* Create Modal */}
-      <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} title="Add New User">
+      <Modal 
+        isOpen={showCreateModal} 
+        onClose={() => setShowCreateModal(false)} 
+        title="Add New User"
+      >
         <form onSubmit={handleCreate} className="space-y-4">
           <Input
             label="Full Name"
@@ -163,8 +213,87 @@ const Users = () => {
             </select>
           </div>
           <div className="flex gap-3">
-            <Button type="submit" variant="primary" className="flex-1" loading={creating}>Add User</Button>
-            <Button type="button" variant="secondary" className="flex-1" onClick={() => setShowCreateModal(false)}>Cancel</Button>
+            <Button type="submit" variant="primary" className="flex-1" loading={creating}>
+              Add User
+            </Button>
+            <Button 
+              type="button" 
+              variant="secondary" 
+              className="flex-1" 
+              onClick={() => setShowCreateModal(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* EDIT MODAL */}
+      <Modal 
+        isOpen={showEditModal} 
+        onClose={() => setShowEditModal(false)} 
+        title="Edit User"
+      >
+        <form onSubmit={handleUpdateUser} className="space-y-4">
+          {/* Email (Read-only) */}
+          <Input
+            label="Email"
+            type="email"
+            value={editingUser?.email || ''}
+            disabled
+            className="bg-gray-100"
+          />
+          
+          {/* Full Name */}
+          <Input
+            label="Full Name"
+            value={formData.fullName}
+            onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+            required
+          />
+          
+          {/* Role */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+            <select
+              value={formData.role}
+              onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="user">User</option>
+              <option value="tenant_admin">Tenant Admin</option>
+            </select>
+          </div>
+          
+          {/* Active Status */}
+          <div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.isActive}
+                onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+              />
+              <span className="text-sm font-medium text-gray-700">Active User</span>
+            </label>
+            <p className="text-xs text-gray-500 mt-1">
+              Inactive users cannot log in
+            </p>
+          </div>
+          
+          {/* Buttons */}
+          <div className="flex gap-3">
+            <Button type="submit" variant="primary" className="flex-1" loading={updating}>
+              Update User
+            </Button>
+            <Button 
+              type="button" 
+              variant="secondary" 
+              className="flex-1" 
+              onClick={() => setShowEditModal(false)}
+            >
+              Cancel
+            </Button>
           </div>
         </form>
       </Modal>

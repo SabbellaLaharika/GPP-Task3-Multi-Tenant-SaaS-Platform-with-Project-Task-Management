@@ -10,5 +10,5 @@ router.post('/tenants/:tenantId/users', authenticate, authorize('tenant_admin'),
 router.get('/tenants/:tenantId/users', authenticate, tenantFilter, userController.listTenantUsers);
 router.put('/users/:userId', authenticate, validate(schemas.updateUser), userController.updateUser);
 router.delete('/users/:userId', authenticate, authorize('tenant_admin'), userController.deleteUser);
-
+router.get('/:id/tasks', authenticate, userController.getUserTasks);
 module.exports = router;

@@ -253,9 +253,39 @@ const deleteUser = async (userId, requestingUserId, requestingUserTenantId) => {
   }
 };
 
+const getUserTasks = async (userId, tenantId) => {
+  const query = `
+    SELECT 
+      t.*,
+      p.name as project_name,
+      p.id as project_id
+    FROM tasks t
+    JOIN projects p ON t.project_id = p.id
+    WHERE t.assigned_to = $1 
+      AND t.tenant_id = $2
+    ORDER BY 
+      CASE t.status
+        WHEN 'todo' THEN 1
+        WHEN 'in_progress' THEN 2
+        WHEN 'completed' THEN 3
+      END,
+      t.due_date ASC NULLS LAST,
+      t.created_at DESC
+  `;
+
+  try {
+    const result = await pool.query(query, [userId, tenantId]);
+    return result.rows;
+  } catch (error) {
+    throw new Error(`Database error: ${error.message}`);
+  }
+};
+
+
 module.exports = {
   addUserToTenant,
   listTenantUsers,
   updateUser,
   deleteUser,
+  getUserTasks,
 };
