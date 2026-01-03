@@ -20,6 +20,7 @@ A comprehensive multi-tenant Software-as-a-Service (SaaS) platform with complete
 - [Installation Guide](#installation-guide)
 - [Database Setup](#database-setup)
 - [Configuration](#configuration)
+- [Docker Setup](#docker-setup)           
 - [Running the Application](#running-the-application)
 - [API Documentation](#api-documentation)
 - [Frontend Features](#frontend-features)
@@ -667,6 +668,187 @@ cat src/services/api.js
 - [ ] API URL configured in `frontend/.env`
 - [ ] Both `.env` files in `.gitignore`
 - [ ] No sensitive data committed to Git
+
+---
+
+## 🐳 Docker Setup (Quick Start)
+
+Run the entire application stack using Docker in under 5 minutes!
+
+### Prerequisites for Docker
+
+- **Docker**: v20.0.0 or higher
+  - Download: https://www.docker.com/get-started
+  - Verify: `docker --version`
+
+- **Docker Compose**: v2.0.0 or higher (included with Docker Desktop)
+  - Verify: `docker-compose --version`
+
+### Step 1: Pull Docker Images
+```bash
+# Pull backend image
+docker pull sabbellalaharika/gpp-task3-backend:latest
+
+# Pull frontend image
+docker pull sabbellalaharika/gpp-task3-frontend:latest
+
+# Pull PostgreSQL image
+docker pull postgres:14
+```
+
+### Step 2: Create Docker Compose File
+
+Create `docker-compose.yml` in project root:
+```yaml
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:14
+    container_name: multitenant-postgres
+    environment:
+      POSTGRES_DB: multitenant_saas
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  backend:
+    image: sabbellalaharika/gpp-task3-backend:latest
+    container_name: multitenant-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: multitenant_saas
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      JWT_SECRET: your_super_secret_jwt_key_change_this_in_production_min_32_chars
+      JWT_EXPIRES_IN: 7d
+      CORS_ORIGIN: http://localhost:3000
+    ports:
+      - "5000:5000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend Application
+  frontend:
+    image: sabbellalaharika/gpp-task3-frontend:latest
+    container_name: multitenant-frontend
+    depends_on:
+      - backend
+    environment:
+      VITE_API_URL: http://localhost:5000
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:
+    driver: local
+```
+
+### Step 3: Start Application
+```bash
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Check service status
+docker-compose ps
+```
+
+### Step 4: Initialize Database
+```bash
+# Run migrations (if not auto-run)
+docker-compose exec backend npm run migrate
+
+# Run seeds
+docker-compose exec backend npm run db:migrate
+
+```
+
+### Step 5: Access Application
+
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:5000
+- **Database**: localhost:5432
+
+### Docker Management Commands
+```bash
+# Stop all services
+docker-compose down
+
+# Stop and remove volumes (⚠️ deletes data)
+docker-compose down -v
+
+# Restart a specific service
+docker-compose restart backend
+
+# View service logs
+docker-compose logs -f backend
+
+# Execute command in container
+docker-compose exec backend sh
+docker-compose exec postgres psql -U postgres -d multitenant_saas
+
+# Rebuild and restart
+docker-compose up -d --build
+```
+
+### Troubleshooting Docker
+
+**Issue: Port already in use**
+```bash
+# Change ports in docker-compose.yml
+ports:
+  - "5001:5000"  # Backend
+  - "3001:3000"  # Frontend
+  - "5433:5432"  # Database
+```
+
+**Issue: Database not ready**
+```bash
+# Check database health
+docker-compose ps
+
+# Wait for health check to pass
+docker-compose logs postgres
+```
+
+**Issue: Backend can't connect to database**
+```bash
+# Ensure DB_HOST=postgres (container name)
+# Not localhost or 127.0.0.1
+```
+
+### Docker vs Manual Setup
+
+| Feature | Docker | Manual |
+|---------|--------|--------|
+| Setup Time | 5 minutes | 30+ minutes |
+| Dependencies | Docker only | Node, PostgreSQL, npm |
+| Isolation | Complete | System-wide |
+| Portability | High | Medium |
+| Best For | Quick start, testing | Development, debugging |
 
 ---
 
@@ -2298,21 +2480,12 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👥 Contributors
 
-- **Developer**: [Your Name]
+- **Developer**: Sabbella Laharika
 - **Project**: Multi-Tenant SaaS Platform
-- **Date**: December 2024
+- **Date**: December 2025
 
 ---
 
-## 📞 Support
-
-For issues, questions, or contributions:
-
-- **Email**: your.email@example.com
-- **GitHub**: https://github.com/yourusername/project
-- **Documentation**: See `/docs` folder
-
----
 
 ## 🙏 Acknowledgments
 
@@ -2335,6 +2508,4 @@ For issues, questions, or contributions:
 
 ---
 
-**Built with ❤️ using modern web technologies**
-
-Last Updated: December 26, 2024
+Last Updated: January 2, 2026
