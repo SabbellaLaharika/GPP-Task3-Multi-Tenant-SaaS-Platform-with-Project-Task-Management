@@ -79,6 +79,7 @@ exports.getAllProjects = async ({ page = 1, limit = 100 }) => {
       p.description,
       p.status,
       p.created_at,
+      p.tenant_id as tenant_id,
       t.name as tenant_name,
       COUNT(DISTINCT tk.id) as total_tasks
     FROM projects p
@@ -96,7 +97,6 @@ exports.getAllProjects = async ({ page = 1, limit = 100 }) => {
       pool.query(query, [limit, offset]),
       pool.query(countQuery)
     ]);
-
     return {
       projects: projectsResult.rows,
       total: parseInt(countResult.rows[0].total),

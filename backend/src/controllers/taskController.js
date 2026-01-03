@@ -21,6 +21,7 @@ const listProjectTasks = async (req, res, next) => {
     const result = await taskService.listProjectTasks(
       req.params.projectId,
       req.tenantId,
+      req.user.role,
       req.query
     );
     res.status(200).json(result);
@@ -86,7 +87,6 @@ const deleteTask = async (req, res) => {
 const getUserTasks = async (req, res) => {
   try {
     const { id } = req.params;
-    const tenantId = req.user.tenantId;
 
     const tasks = await userService.getUserTasks(id);
 

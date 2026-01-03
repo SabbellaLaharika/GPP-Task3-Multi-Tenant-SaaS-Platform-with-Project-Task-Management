@@ -53,56 +53,131 @@ const createTask = async (projectId, taskData, tenantId) => {
   }
 };
 
-const listProjectTasks = async (projectId, tenantId, filters = {}) => {
+const listProjectTasks = async (projectId, tenantId, userRole, filters = {}) => {
   try {
     const { page = 1, limit = 50, status, assignedTo, priority, search } = filters;
     const offset = (page - 1) * limit;
+    
+    let query;
+    let params;
+    let countQuery;
+    let countParams;
+    
+    // Super admin can see all tasks
+    if (userRole === 'super_admin') {
+      query = `
+        SELECT t.*, u.full_name as assigned_to_name
+        FROM tasks t
+        LEFT JOIN users u ON t.assigned_to = u.id
+        WHERE t.project_id = $1
+      `;
+      params = [projectId];
+      countQuery = 'SELECT COUNT(*) FROM tasks WHERE project_id = $1';
+      countParams = [projectId];
+      
+      let paramCounter = 2;
+      
+      if (status) {
+        query += ` AND t.status = $${paramCounter}`;
+        countQuery += ` AND status = $${paramCounter}`;
+        params.push(status);
+        countParams.push(status);
+        paramCounter++;
+      }
 
-    let query = `
-      SELECT t.*, u.full_name as assigned_to_name
-      FROM tasks t
-      LEFT JOIN users u ON t.assigned_to = u.id
-      WHERE t.project_id = $1 AND t.tenant_id = $2
-    `;
-    const params = [projectId, tenantId];
-    let paramCounter = 3;
+      if (assignedTo) {
+        query += ` AND t.assigned_to = $${paramCounter}`;
+        countQuery += ` AND assigned_to = $${paramCounter}`;
+        params.push(assignedTo);
+        countParams.push(assignedTo);
+        paramCounter++;
+      }
 
-    if (status) {
-      query += ` AND t.status = $${paramCounter++}`;
-      params.push(status);
+      if (priority) {
+        query += ` AND t.priority = $${paramCounter}`;
+        countQuery += ` AND priority = $${paramCounter}`;
+        params.push(priority);
+        countParams.push(priority);
+        paramCounter++;
+      }
+
+      if (search) {
+        query += ` AND t.title ILIKE $${paramCounter}`;
+        countQuery += ` AND title ILIKE $${paramCounter}`;
+        params.push(`%${search}%`);
+        countParams.push(`%${search}%`);
+        paramCounter++;
+      }
+
+      query += ` ORDER BY 
+        CASE t.priority 
+          WHEN 'high' THEN 1 
+          WHEN 'medium' THEN 2 
+          WHEN 'low' THEN 3 
+        END,
+        t.due_date ASC
+        LIMIT $${paramCounter} OFFSET $${paramCounter + 1}`;
+      params.push(limit, offset);
+      
+    } else {
+      // Regular tenant admin/user
+      query = `
+        SELECT t.*, u.full_name as assigned_to_name
+        FROM tasks t
+        LEFT JOIN users u ON t.assigned_to = u.id
+        WHERE t.project_id = $1 AND t.tenant_id = $2
+      `;
+      params = [projectId, tenantId];
+      countQuery = 'SELECT COUNT(*) FROM tasks WHERE project_id = $1 AND tenant_id = $2';
+      countParams = [projectId, tenantId];
+      
+      let paramCounter = 3;
+
+      if (status) {
+        query += ` AND t.status = $${paramCounter}`;
+        countQuery += ` AND status = $${paramCounter}`;
+        params.push(status);
+        countParams.push(status);
+        paramCounter++;
+      }
+
+      if (assignedTo) {
+        query += ` AND t.assigned_to = $${paramCounter}`;
+        countQuery += ` AND assigned_to = $${paramCounter}`;
+        params.push(assignedTo);
+        countParams.push(assignedTo);
+        paramCounter++;
+      }
+
+      if (priority) {
+        query += ` AND t.priority = $${paramCounter}`;
+        countQuery += ` AND priority = $${paramCounter}`;
+        params.push(priority);
+        countParams.push(priority);
+        paramCounter++;
+      }
+
+      if (search) {
+        query += ` AND t.title ILIKE $${paramCounter}`;
+        countQuery += ` AND title ILIKE $${paramCounter}`;
+        params.push(`%${search}%`);
+        countParams.push(`%${search}%`);
+        paramCounter++;
+      }
+
+      query += ` ORDER BY 
+        CASE t.priority 
+          WHEN 'high' THEN 1 
+          WHEN 'medium' THEN 2 
+          WHEN 'low' THEN 3 
+        END,
+        t.due_date ASC
+        LIMIT $${paramCounter} OFFSET $${paramCounter + 1}`;
+      params.push(limit, offset);
     }
-
-    if (assignedTo) {
-      query += ` AND t.assigned_to = $${paramCounter++}`;
-      params.push(assignedTo);
-    }
-
-    if (priority) {
-      query += ` AND t.priority = $${paramCounter++}`;
-      params.push(priority);
-    }
-
-    if (search) {
-      query += ` AND t.title ILIKE $${paramCounter++}`;
-      params.push(`%${search}%`);
-    }
-
-    query += ` ORDER BY 
-      CASE t.priority 
-        WHEN 'high' THEN 1 
-        WHEN 'medium' THEN 2 
-        WHEN 'low' THEN 3 
-      END,
-      t.due_date ASC
-      LIMIT $${paramCounter++} OFFSET $${paramCounter}`;
-    params.push(limit, offset);
 
     const result = await pool.query(query, params);
-
-    const countResult = await pool.query(
-      'SELECT COUNT(*) FROM tasks WHERE project_id = $1 AND tenant_id = $2',
-      [projectId, tenantId]
-    );
+    const countResult = await pool.query(countQuery, countParams);
 
     return {
       success: true,
@@ -236,7 +311,6 @@ const deleteTask = async (taskId, tenantId, assigned_to) => {
 };
 
 const getUserTasks = async (userId) => {
-  print('Fetching tasks for user:', userId);
   const query = `
     SELECT 
       t.*,
@@ -258,7 +332,6 @@ const getUserTasks = async (userId) => {
 
   try {
     const result = await pool.query(query, [userId]);
-    console.log(result.rows);
     return result.rows;
   } catch (error) {
     throw new Error(`Database error: ${error.message}`);

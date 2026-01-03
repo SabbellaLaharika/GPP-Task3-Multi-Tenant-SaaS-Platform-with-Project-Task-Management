@@ -9,7 +9,6 @@ const taskService = {
   getUserTasks : async (userId) => {
     try {
       const response = await api.get(`api/users/${userId}/tasks`);
-      console.log('Fetched tasks for user:', userId);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;

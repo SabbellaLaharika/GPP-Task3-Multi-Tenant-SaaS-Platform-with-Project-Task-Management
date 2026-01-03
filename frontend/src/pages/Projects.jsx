@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import projectService from '../services/projectService';
 import toast from 'react-hot-toast';
 import { FaPlus, FaEdit, FaTrash, FaTimes, FaProjectDiagram, FaSearch } from 'react-icons/fa';
-import superAdminService from '../services/superAdminService';
+import { getAllProjects,getAllTenantsWithStats } from '../services/superAdminService';
 
 const Projects = () => {
   const { user, isSuperAdmin } = useAuth();
@@ -14,6 +14,8 @@ const Projects = () => {
   const [editingProject, setEditingProject] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [tenants, setTenants] = useState([]);
+  const [filterTenant, setFilterTenant] = useState('all');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -23,14 +25,16 @@ const Projects = () => {
 
   useEffect(() => {
     fetchProjects();
+    if (isSuperAdmin) {
+      fetchTenants();
+    }
   }, []);
 
   const fetchProjects = async () => {
     try {
       setLoading(true);
       if(isSuperAdmin){
-        const response = await superAdminService.getAllProjects();
-        console.log(response.data.projects);
+        const response = await getAllProjects();
         setProjects(response.data.projects || []);
       }
       else {
@@ -44,6 +48,15 @@ const Projects = () => {
       setLoading(false);
     }
   };
+
+  const fetchTenants = async () => {
+  try {
+    const response = await getAllTenantsWithStats();
+    setTenants(response.data.tenants || []);
+  } catch (error) {
+    console.error('Failed to load tenants', error);
+  }
+};
 
   const handleInputChange = (e) => {
     setFormData({
@@ -127,7 +140,8 @@ const Projects = () => {
     const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          project.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'all' || project.status === filterStatus;
-    return matchesSearch && matchesStatus;
+    const matchesTenant = filterTenant === 'all' || project.tenant_name === filterTenant;
+    return matchesSearch && matchesStatus && matchesTenant;
   });
 
   const getStatusColor = (status) => {
@@ -147,13 +161,14 @@ const Projects = () => {
           <h1 className="text-2xl font-bold text-gray-800">Projects</h1>
           <p className="text-gray-600">{isSuperAdmin ? 'View all tenant projects' : 'Manage your organization\'s projects'}</p>
         </div>
+        {!isSuperAdmin && (
         <button
           onClick={handleCreateClick}
           className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
         >
           <FaPlus /> New Project
-        </button>
-      </div>
+        </button>)}
+      </div> 
 
       {/* Search and Filter */}
       <div className="mb-6 flex flex-col md:flex-row gap-4">
@@ -170,6 +185,21 @@ const Projects = () => {
             className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
+        {/* Tenant Filter - Only for Super Admin */}
+        {isSuperAdmin && (
+          <select
+            value={filterTenant}
+            onChange={(e) => setFilterTenant(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Tenants</option>
+            {tenants.map((tenant) => (
+              <option key={tenant.id} value={tenant.name}>
+                {tenant.name}
+              </option>
+            ))}
+          </select>
+        )}
 
         {/* Status Filter */}
         <select
@@ -236,13 +266,14 @@ const Projects = () => {
                   <span className={`text-xs px-3 py-1 rounded-full font-medium ${getStatusColor(project.status)}`}>
                     {project.status}
                   </span>
-                  <span className="text-sm text-gray-500">
-                    {project.task_count || 0} tasks
-                  </span>
+                  {isSuperAdmin && (<span className="text-sm text-gray-500">
+                    {project.total_tasks || 0} tasks
+                  </span>)}
                 </div>
               </Link>
               
               {/* Action Buttons */}
+              { !isSuperAdmin && (
               <div className="px-6 py-3 bg-gray-50 border-t flex justify-end gap-2">
                 <button
                   onClick={() => handleEditClick(project)}
@@ -258,7 +289,7 @@ const Projects = () => {
                 >
                   <FaTrash />
                 </button>
-              </div>
+              </div> )}
             </div>
           ))}
         </div>

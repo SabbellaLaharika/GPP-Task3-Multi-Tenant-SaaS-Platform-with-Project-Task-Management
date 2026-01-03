@@ -26,40 +26,14 @@ const RegularUserDashboard = () => {
   });
 
   useEffect(() => {
-  const debugFetch = async () => {
-    console.log('=== DEBUG START ===');
-    console.log('User:', user);
-    console.log('User ID:', user?.id);
-    
-    if (!user?.id) {
-      console.error('No user ID found!');
-      return;
-    }
-    
-    try {
-      console.log('Calling getUserTasks...');
-      const response = await taskService.getUserTasks(user.id);
-      console.log('Response:', response);
-      console.log('Tasks:', response.data.tasks);
-    } catch (error) {
-      console.error('Error:', error);
-    }
-    console.log('=== DEBUG END ===');
-  };
-  
-  if (user?.id) {
-    debugFetch();
-  }
-  fetchUserData();
-}, [user?.id]);
+      fetchUserData();
+  }, [] );
   const fetchUserData = async () => {
     try {
       setLoading(true);
       
-      // Fetch ONLY tasks assigned to current 
-      console.log(user.id);
+      // Fetch ONLY tasks assigned to current user
       const tasksResponse = await taskService.getUserTasks(user.id);
-      console.log('Tasks Response:', tasksResponse);
       const userTasks = tasksResponse.data.tasks || [];
       setMyTasks(userTasks);
       

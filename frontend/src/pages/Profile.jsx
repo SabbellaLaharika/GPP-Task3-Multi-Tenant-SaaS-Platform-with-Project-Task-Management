@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { FaUser, FaSave } from 'react-icons/fa';
 
 const Profile = () => {
-  const { user } = useAuth();
+  const { user, checkAuth } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
@@ -36,6 +36,7 @@ const Profile = () => {
       await userService.update(user.id, {
         fullName: formData.fullName
       });
+      await checkAuth();
       toast.success('Profile updated successfully');
     } catch (error) {
       toast.error('Failed to update profile');

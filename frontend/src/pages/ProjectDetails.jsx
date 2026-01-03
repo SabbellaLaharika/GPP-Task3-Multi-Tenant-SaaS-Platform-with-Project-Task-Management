@@ -6,11 +6,12 @@ import taskService from '../services/taskService';
 import tenantService from '../services/userService';
 import toast from 'react-hot-toast';
 import { FaArrowLeft, FaPlus, FaEdit, FaTrash, FaTimes, FaTasks } from 'react-icons/fa';
+import { getAllProjects } from '../services/superAdminService';
 
 const ProjectDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, tenantId } = useAuth();
+  const { user, tenantId, isSuperAdmin } = useAuth();
   
   const [project, setProject] = useState(null);
   const [tasks, setTasks] = useState([]);
@@ -37,9 +38,11 @@ const ProjectDetails = () => {
     try {
       
       // Fetch project details
-      const projectsResponse = await projectService.getAll();
+      const projectsResponse = isSuperAdmin ? await getAllProjects() : await projectService.getAll();
+      //const projectsResponse = await projectService.getAll();
       const currentProject = projectsResponse.data.projects.find(p => p.id === id);
-      
+      console.log('Fetched Projects:', projectsResponse.data.projects);
+      console.log('Current Project:', currentProject);
       if (!currentProject) {
         toast.error('Project not found');
         navigate('/projects');
@@ -49,13 +52,17 @@ const ProjectDetails = () => {
       setProject(currentProject);
       
       // Fetch tasks
+      console.log('Fetching tasks for project ID:', id);
       const tasksResponse = await taskService.getAllByProject(id);
+      console.log('Fetched Tasks:', tasksResponse);
       setTasks(tasksResponse.data.tasks || []);
       
       // Fetch users for assignment
-      const usersResponse = await tenantService.getAllByTenant(tenantId);
+      const projectTenantId = currentProject.tenant_id;
+    if (projectTenantId) {
+      const usersResponse = await tenantService.getAllByTenant(projectTenantId);
       setUsers(usersResponse.data.users || []);
-      
+    }
     } catch (error) {
       toast.error('Failed to load project data');
       console.error(error);
@@ -220,12 +227,13 @@ const ProjectDetails = () => {
               </span>
             </div>
           </div>
+          {!isSuperAdmin && (
           <button
             onClick={handleCreateClick}
             className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
           >
             <FaPlus /> New Task
-          </button>
+          </button>)}
         </div>
       </div>
 
@@ -243,6 +251,7 @@ const ProjectDetails = () => {
                 key={task.id}
                 task={task}
                 users={users}
+                isSuperAdmin={isSuperAdmin} 
                 onEdit={handleEditClick}
                 onDelete={handleDelete}
                 onStatusChange={handleStatusChange}
@@ -267,6 +276,7 @@ const ProjectDetails = () => {
                 key={task.id}
                 task={task}
                 users={users}
+                isSuperAdmin={isSuperAdmin} 
                 onEdit={handleEditClick}
                 onDelete={handleDelete}
                 onStatusChange={handleStatusChange}
@@ -291,6 +301,7 @@ const ProjectDetails = () => {
                 key={task.id}
                 task={task}
                 users={users}
+                isSuperAdmin={isSuperAdmin} 
                 onEdit={handleEditClick}
                 onDelete={handleDelete}
                 onStatusChange={handleStatusChange}
@@ -447,27 +458,28 @@ const ProjectDetails = () => {
 };
 
 // Task Card Component
-const TaskCard = ({ task, users, onEdit, onDelete, onStatusChange, getPriorityColor }) => {
+const TaskCard = ({ task, users, isSuperAdmin, onEdit, onDelete, onStatusChange, getPriorityColor }) => {
   const assignedUser = users.find(u => u.id === task.assigned_to);
 
   return (
     <div className="bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow">
       <div className="flex justify-between items-start mb-2">
         <h3 className="font-semibold text-gray-800">{task.title}</h3>
-        <div className="flex gap-1">
-          <button
-            onClick={() => onEdit(task)}
-            className="text-blue-600 hover:text-blue-700 p-1"
-          >
-            <FaEdit size={14} />
-          </button>
-          <button
-            onClick={() => onDelete(task.id, task.title)}
-            className="text-red-600 hover:text-red-700 p-1"
-          >
-            <FaTrash size={14} />
-          </button>
-        </div>
+        {!isSuperAdmin && (<div className="flex gap-1">
+            <button
+              onClick={() =>  onEdit(task)}
+              className="text-blue-600 hover:text-blue-700 p-1"
+            >
+              <FaEdit size={14} />
+            </button>
+            <button
+              onClick={() => onDelete(task.id, task.title)}
+              className="text-red-600 hover:text-red-700 p-1"
+            >
+              <FaTrash size={14} />
+            </button>
+          </div> 
+        )}
       </div>
       
       {task.description && (
