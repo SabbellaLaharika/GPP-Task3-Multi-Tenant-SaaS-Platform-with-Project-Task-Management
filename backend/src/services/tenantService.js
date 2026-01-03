@@ -67,70 +67,40 @@ const getTenantDetails = async (tenantId, requestingUserId, requestingUserRole) 
 /**
  * Update tenant
  */
-const updateTenant = async (tenantId, updateData, requestingUserRole) => {
+const updateTenant = async (tenantId, updateData) => {
+  // Build dynamic UPDATE query
+  const fields = Object.keys(updateData);
+  const values = Object.values(updateData);
+  
+  if (fields.length === 0) {
+    throw new Error('No fields to update');
+  }
+
+  // Build SET clause: field1 = $1, field2 = $2, ...
+  const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
+  
+  const query = `
+    UPDATE tenants 
+    SET ${setClause}, updated_at = NOW()
+    WHERE id = $${fields.length + 1}
+    RETURNING *
+  `;
+
+  console.log('updateTenant service - query:', query);
+  console.log('updateTenant service - values:', [...values, tenantId]);
+
   try {
-    const allowedFields = [];
-    const values = [];
-    let paramCounter = 1;
-
-    // Only super_admin can update status, plan, and limits
-    if (requestingUserRole === 'super_admin') {
-      if (updateData.status) {
-        allowedFields.push(`status = $${paramCounter++}`);
-        values.push(updateData.status);
-      }
-      if (updateData.subscriptionPlan) {
-        allowedFields.push(`subscription_plan = $${paramCounter++}`);
-        values.push(updateData.subscriptionPlan);
-      }
-      if (updateData.maxUsers !== undefined) {
-        allowedFields.push(`max_users = $${paramCounter++}`);
-        values.push(updateData.maxUsers);
-      }
-      if (updateData.maxProjects !== undefined) {
-        allowedFields.push(`max_projects = $${paramCounter++}`);
-        values.push(updateData.maxProjects);
-      }
-    }
-
-    // Tenant admins can only update name
-    if (updateData.name) {
-      allowedFields.push(`name = $${paramCounter++}`);
-      values.push(updateData.name);
-    }
-
-    if (allowedFields.length === 0) {
-      throw new Error('No valid fields to update');
-    }
-
-    allowedFields.push(`updated_at = $${paramCounter++}`);
-    values.push(new Date());
-
-    values.push(tenantId);
-
-    const query = `
-      UPDATE tenants 
-      SET ${allowedFields.join(', ')}
-      WHERE id = $${paramCounter}
-      RETURNING id, name, subdomain, status, subscription_plan, max_users, max_projects, updated_at
-    `;
-
-    const result = await pool.query(query, values);
-
+    const result = await pool.query(query, [...values, tenantId]);
+    
     if (result.rows.length === 0) {
       throw new Error('Tenant not found');
     }
 
-    logger.info('Tenant updated', { tenantId });
-
-    return {
-      success: true,
-      message: 'Tenant updated successfully',
-      data: result.rows[0],
-    };
+    console.log('updateTenant service - updated tenant:', result.rows[0]);
+    return result.rows[0];
   } catch (error) {
-    logger.error('Update tenant failed', { tenantId, error: error.message });
-    throw error;
+    console.error('updateTenant service error:', error);
+    throw new Error(`Database error: ${error.message}`);
   }
 };
 
@@ -219,47 +189,8 @@ const listAllTenants = async (filters = {}) => {
   }
 };
 
-const getAllTenants = async ({ page = 1, limit = 10 }) => {
-  const offset = (page - 1) * limit;
-  
-  const query = `
-    SELECT 
-      t.*,
-      COUNT(DISTINCT u.id) as total_users,
-      COUNT(DISTINCT p.id) as total_projects,
-      COUNT(DISTINCT tk.id) as total_tasks
-    FROM tenants t
-    LEFT JOIN users u ON t.id = u.tenant_id AND u.is_active = true
-    LEFT JOIN projects p ON t.id = p.tenant_id
-    LEFT JOIN tasks tk ON t.id = tk.tenant_id
-    GROUP BY t.id
-    ORDER BY t.created_at DESC
-    LIMIT $1 OFFSET $2
-  `;
-
-  const countQuery = `SELECT COUNT(*) as total FROM tenants`;
-
-  try {
-    const [tenantsResult, countResult] = await Promise.all([
-      pool.query(query, [limit, offset]),
-      pool.query(countQuery)
-    ]);
-
-    return {
-      tenants: tenantsResult.rows,
-      total: parseInt(countResult.rows[0].total),
-      page,
-      limit,
-      totalPages: Math.ceil(countResult.rows[0].total / limit)
-    };
-  } catch (error) {
-    throw new Error(`Database error: ${error.message}`);
-  }
-};
-
 module.exports = {
   getTenantDetails,
   updateTenant,
-  listAllTenants,
-  getAllTenants,
+  listAllTenants
 };

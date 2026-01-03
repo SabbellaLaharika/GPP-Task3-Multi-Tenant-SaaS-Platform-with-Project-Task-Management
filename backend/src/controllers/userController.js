@@ -36,6 +36,7 @@ const updateUser = async (req, res, next) => {
       req.user.id,
       req.user.role
     );
+    console.log('updateUser controller - result:', req.params.userId, result);
     res.status(200).json(result);
   } catch (error) {
     if (error.message === 'User not found') {

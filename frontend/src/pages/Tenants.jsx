@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 import tenantService from '../services/tenantService';
+import { getAllTenantsWithStats } from '../services/superAdminService';      
 import toast from 'react-hot-toast';
 import { FaBuilding, FaCheckCircle, FaTimesCircle, FaSearch } from 'react-icons/fa';
 
 const Tenants = () => {
+  const {user, isSuperAdmin} = useAuth();
   const [tenants, setTenants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -15,8 +18,10 @@ const Tenants = () => {
   const fetchTenants = async () => {
     try {
       setLoading(true);
-      const response = await tenantService.getAll({ page: 1, limit: 100 });
-      setTenants(response.data.tenants);
+      const response = await getAllTenantsWithStats({ page: 1, limit: 100 });
+      console.log(response.data);
+      setTenants(response.data.tenants || []);
+      
     } catch (error) {
       toast.error('Failed to load tenants');
       console.error(error);

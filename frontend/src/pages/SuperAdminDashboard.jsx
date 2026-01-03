@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import tenantService from '../services/tenantService';
+import { getSystemStats, getAllTenantsWithStats } from '../services/superAdminService';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { 
@@ -23,33 +23,41 @@ const SuperAdminDashboard = () => {
     totalTenants: 0,
     activeTenants: 0,
     totalProjects: 0,
-    totalTasks: 0
+    totalTasks: 0,
+    completedTasks: 0,
+    inProgressTasks: 0,
+    todoTasks: 0,
+    totalUsers: 0
   });
 
   useEffect(() => {
-    fetchTenants();
+    fetchData();
   }, []);
 
-  const fetchTenants = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await tenantService.getAll({ page: 1, limit: 100 });
-      setTenants(response.data.tenants);
       
-      // Calculate system-wide stats
-      const activeTenants = response.data.tenants.filter(t => t.status === 'active').length;
-      const totalProjects = response.data.tenants.reduce((sum, t) => sum + (t.total_projects || 0), 0);
-      const totalTasks = response.data.tenants.reduce((sum, t) => sum + (t.total_tasks || 0), 0);
-      
+      // Fetch system stats
+      const statsResponse = await getSystemStats();
       setStats({
-        totalTenants: response.data.tenants.length,
-        activeTenants,
-        totalProjects,
-        totalTasks
+        totalTenants: parseInt(statsResponse.data.total_tenants) || 0,
+        activeTenants: parseInt(statsResponse.data.active_tenants) || 0,
+        totalProjects: parseInt(statsResponse.data.total_projects) || 0,
+        totalTasks: parseInt(statsResponse.data.total_tasks) || 0,
+        completedTasks: parseInt(statsResponse.data.completed_tasks) || 0,
+        inProgressTasks: parseInt(statsResponse.data.in_progress_tasks) || 0,
+        todoTasks: parseInt(statsResponse.data.todo_tasks) || 0,
+        totalUsers: parseInt(statsResponse.data.total_users) || 0
       });
+      
+      // Fetch all tenants
+      const tenantsResponse = await getAllTenantsWithStats({ page: 1, limit: 100 });
+      setTenants(tenantsResponse.data.tenants || []);
+      
     } catch (error) {
-      toast.error('Failed to load tenants');
-      console.error(error);
+      toast.error('Failed to load dashboard data');
+      console.error('Dashboard error:', error);
     } finally {
       setLoading(false);
     }
@@ -115,29 +123,14 @@ const SuperAdminDashboard = () => {
               <div>
                 <p className="text-gray-500 text-sm font-medium uppercase">Organizations</p>
                 <p className="text-3xl font-bold text-gray-800 mt-2">{stats.totalTenants}</p>
+                <p className="text-sm text-green-600 mt-1">{stats.activeTenants} active</p>
               </div>
               <div className="bg-purple-100 p-4 rounded-full">
                 <FaBuilding className="text-3xl text-purple-600" />
               </div>
             </div>
-            <div className="mt-3 text-purple-600 text-sm flex items-center gap-1">
-              View All <FaArrowRight />
-            </div>
           </div>
         </Link>
-
-        {/* Active Tenants */}
-        <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500 hover:shadow-xl transition-shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-500 text-sm font-medium uppercase">Active</p>
-              <p className="text-3xl font-bold text-gray-800 mt-2">{stats.activeTenants}</p>
-            </div>
-            <div className="bg-green-100 p-4 rounded-full">
-              <FaCheckCircle className="text-3xl text-green-600" />
-            </div>
-          </div>
-        </div>
 
         {/* Total Projects */}
         <Link to="/projects" className="block">
@@ -151,9 +144,6 @@ const SuperAdminDashboard = () => {
                 <FaProjectDiagram className="text-3xl text-blue-600" />
               </div>
             </div>
-            <div className="mt-3 text-blue-600 text-sm flex items-center gap-1">
-              View All <FaArrowRight />
-            </div>
           </div>
         </Link>
 
@@ -163,9 +153,28 @@ const SuperAdminDashboard = () => {
             <div>
               <p className="text-gray-500 text-sm font-medium uppercase">Total Tasks</p>
               <p className="text-3xl font-bold text-gray-800 mt-2">{stats.totalTasks}</p>
+              <div className="flex gap-2 mt-1 text-xs">
+                <span className="text-green-600">{stats.completedTasks} done</span>
+                <span className="text-blue-600">{stats.inProgressTasks} active</span>
+                <span className="text-gray-600">{stats.todoTasks} todo</span>
+              </div>
             </div>
             <div className="bg-orange-100 p-4 rounded-full">
               <FaTasks className="text-3xl text-orange-600" />
+            </div>
+          </div>
+        </div>
+
+        {/* Total Users */}
+        <div className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500 hover:shadow-xl transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-500 text-sm font-medium uppercase">Total Users</p>
+              <p className="text-3xl font-bold text-gray-800 mt-2">{stats.totalUsers}</p>
+              <p className="text-sm text-gray-600 mt-1">Across all orgs</p>
+            </div>
+            <div className="bg-green-100 p-4 rounded-full">
+              <FaCheckCircle className="text-3xl text-green-600" />
             </div>
           </div>
         </div>
@@ -188,7 +197,7 @@ const SuperAdminDashboard = () => {
         {loading ? (
           <div className="p-12 text-center">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-            <p className="mt-4 text-gray-600">Loading organizations...</p>
+            <p className="mt-4 text-gray-600">Loading dashboard data...</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -260,20 +269,13 @@ const SuperAdminDashboard = () => {
                         {getStatusBadge(tenant.status)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <div className="flex flex-col items-center">
-                          <span className="text-lg font-bold text-gray-900">
-                            {tenant.total_projects || 0}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            / {tenant.max_projects || '∞'}
-                          </span>
+                        <div className="text-lg font-bold text-gray-900">
+                          {tenant.total_projects || 0}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <div className="flex flex-col items-center">
-                          <span className="text-lg font-bold text-gray-900">
-                            {tenant.total_tasks || 0}
-                          </span>
+                        <div className="text-lg font-bold text-gray-900">
+                          {tenant.total_tasks || 0}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -329,9 +331,9 @@ const SuperAdminDashboard = () => {
             </p>
           </div>
           <div className="border rounded-lg p-4">
-            <p className="text-sm text-gray-600">Tasks per Project</p>
+            <p className="text-sm text-gray-600">Task Completion</p>
             <p className="text-2xl font-bold text-gray-900 mt-2">
-              {stats.totalProjects > 0 ? (stats.totalTasks / stats.totalProjects).toFixed(1) : 0}
+              {stats.totalTasks > 0 ? ((stats.completedTasks / stats.totalTasks) * 100).toFixed(0) : 0}%
             </p>
           </div>
         </div>

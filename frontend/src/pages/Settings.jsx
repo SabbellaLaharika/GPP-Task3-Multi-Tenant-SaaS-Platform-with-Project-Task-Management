@@ -4,6 +4,22 @@ import tenantService from '../services/tenantService';
 import toast from 'react-hot-toast';
 import { FaCog, FaBuilding, FaUser, FaSave, FaCrown } from 'react-icons/fa';
 
+// SUBSCRIPTION PLAN LIMITS
+const SUBSCRIPTION_LIMITS = {
+  free: {
+    max_users: 5,
+    max_projects: 3
+  },
+  pro: {
+    max_users: 25,
+    max_projects: 15
+  },
+  enterprise: {
+    max_users: 100,
+    max_projects: 50
+  }
+};
+
 const Settings = () => {
   const { user, isSuperAdmin, isTenantAdmin } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -11,14 +27,16 @@ const Settings = () => {
   const [tenantData, setTenantData] = useState(null);
   const [allTenants, setAllTenants] = useState([]);
   const [selectedTenant, setSelectedTenant] = useState(null);
-  
-  const [formData, setFormData] = useState({
+
+  const emptyForm = {
     name: '',
     subscriptionPlan: '',
     maxUsers: '',
     maxProjects: '',
     status: ''
-  });
+  }
+  
+  const [formData, setFormData] = useState(emptyForm);
 
   useEffect(() => {
     fetchData();
@@ -32,10 +50,12 @@ const Settings = () => {
         // Super admin sees all tenants
         const response = await tenantService.getAll({ page: 1, limit: 100 });
         setAllTenants(response.data.tenants);
-      } else if (isTenantAdmin) {
+        setSelectedTenant(null);
+        setFormData(emptyForm);
+      } else if (isTenantAdmin || selectedTenant) {
         // Tenant admin sees only their tenant
         const response = await tenantService.getDetails(user.tenantId);
-        setTenantData(response.data);
+        setTenantData(response.data.name);
         setFormData({
           name: response.data.name,
           subscriptionPlan: response.data.subscription_plan,
@@ -56,6 +76,7 @@ const Settings = () => {
     try {
       setLoading(true);
       const response = await tenantService.getDetails(tenantId);
+      console.log(response.data.name.subscription_plan);
       setSelectedTenant(response.data);
       setFormData({
         name: response.data.name,
@@ -73,10 +94,27 @@ const Settings = () => {
   };
 
   const handleInputChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    const { name, value } = e.target;
+
+  if (
+    name === 'subscriptionPlan' &&
+    isSuperAdmin &&
+    SUBSCRIPTION_LIMITS[value]
+  ) {
+    const limits = SUBSCRIPTION_LIMITS[value];
+    setFormData((prev) => ({
+      ...prev,
+      subscriptionPlan: value,
+      maxUsers: limits.max_users,
+      maxProjects: limits.max_projects
+    }));
+    return;
+  }
+
+  setFormData((prev) => ({
+    ...prev,
+    [name]: value
+  }));
   };
 
   const handleSubmit = async (e) => {
@@ -92,6 +130,7 @@ const Settings = () => {
         return;
       }
 
+      console.log('Updating tenant:', tenantId, formData);
       await tenantService.update(tenantId, {
         name: formData.name,
         subscription_plan: formData.subscriptionPlan,
@@ -156,7 +195,7 @@ const Settings = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Super Admin: Tenant Selector */}
-        {isSuperAdmin && (
+        {isSuperAdmin && !selectedTenant &&(
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -233,16 +272,16 @@ const Settings = () => {
                       disabled={!isSuperAdmin}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                     >
-                      <option value="free">Free</option>
-                      <option value="pro">Pro</option>
-                      <option value="enterprise">Enterprise</option>
+                      <option value="free">Free (5 users, 3 projects)</option>
+                      <option value="pro">Pro (25 users, 15 projects)</option>
+                      <option value="enterprise">Enterprise (100 users, 50 projects)</option>
                     </select>
                     {!isSuperAdmin && (
                       <p className="text-xs text-gray-500 mt-1">Contact support to change plan</p>
                     )}
                   </div>
 
-                  {/* Max Users */}
+                  {/* Max Users - AUTO-UPDATED */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Maximum Users *
@@ -256,14 +295,19 @@ const Settings = () => {
                       min="1"
                       disabled={!isSuperAdmin}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-                      placeholder="10"
+                      placeholder="click on plan to auto-fill"
                     />
+                    {isSuperAdmin && (
+                      <p className="text-xs text-blue-500 mt-1">
+                        ✓ Auto-updated based on plan
+                      </p>
+                    )}
                     {!isSuperAdmin && (
                       <p className="text-xs text-gray-500 mt-1">Contact support to increase limit</p>
                     )}
                   </div>
 
-                  {/* Max Projects */}
+                  {/* Max Projects - AUTO-UPDATED */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Maximum Projects *
@@ -277,8 +321,13 @@ const Settings = () => {
                       min="1"
                       disabled={!isSuperAdmin}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-                      placeholder="5"
+                      placeholder="click on plan to auto-fill"
                     />
+                    {isSuperAdmin && (
+                      <p className="text-xs text-blue-500 mt-1">
+                        ✓ Auto-updated based on plan
+                      </p>
+                    )}
                     {!isSuperAdmin && (
                       <p className="text-xs text-gray-500 mt-1">Contact support to increase limit</p>
                     )}
@@ -375,6 +424,30 @@ const Settings = () => {
           )}
         </div>
       </div>
+
+      {/* Plan Limits Reference */}
+      {isSuperAdmin && (
+        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-blue-900 mb-3">Subscription Plan Limits</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div className="bg-white p-3 rounded border border-blue-200">
+              <p className="font-semibold text-gray-700">Free Plan</p>
+              <p className="text-gray-600 mt-1">Max Users: <strong>5</strong></p>
+              <p className="text-gray-600">Max Projects: <strong>3</strong></p>
+            </div>
+            <div className="bg-white p-3 rounded border border-blue-200">
+              <p className="font-semibold text-gray-700">Pro Plan</p>
+              <p className="text-gray-600 mt-1">Max Users: <strong>25</strong></p>
+              <p className="text-gray-600">Max Projects: <strong>15</strong></p>
+            </div>
+            <div className="bg-white p-3 rounded border border-blue-200">
+              <p className="font-semibold text-gray-700">Enterprise Plan</p>
+              <p className="text-gray-600 mt-1">Max Users: <strong>100</strong></p>
+              <p className="text-gray-600">Max Projects: <strong>50</strong></p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

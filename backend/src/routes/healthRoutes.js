@@ -8,12 +8,14 @@ router.get('/health', async (req, res) => {
     await pool.query('SELECT NOW()');
     res.status(200).json({ 
       status: 'ok', 
-      database: 'connected' 
+      database: 'connected',
+      timestamp: new Date().toISOString()
     });
   } catch (error) {
     res.status(503).json({ 
       status: 'error', 
-      database: 'disconnected' 
+      database: 'disconnected',
+      error: error.message 
     });
   }
 });

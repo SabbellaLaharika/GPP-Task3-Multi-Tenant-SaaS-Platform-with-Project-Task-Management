@@ -5,6 +5,7 @@ const logger = require('./utils/logger');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 
 // Import routes
+const healthRoutes = require('./routes/healthRoutes'); 
 const authRoutes = require('./routes/authRoutes');
 const tenantRoutes = require('./routes/tenantRoutes');
 const userRoutes = require('./routes/userRoutes');
@@ -41,7 +42,7 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
-const healthRoutes = require('./routes/healthRoutes');
+
 app.use('/api', healthRoutes);
 // API Routes
 app.use('/api/auth', authRoutes);
