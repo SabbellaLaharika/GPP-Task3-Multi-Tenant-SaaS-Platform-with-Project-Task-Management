@@ -28,6 +28,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     const response = await authService.login(credentials);
+    alert('Login response:', response.data);
     setUser(response.data.user);
     toast.success('Welcome back!');
     return response;

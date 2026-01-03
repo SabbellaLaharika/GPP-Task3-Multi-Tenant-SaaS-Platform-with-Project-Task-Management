@@ -66,10 +66,12 @@ const deleteUser = async (req, res, next) => {
 
 const getUserTasks = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { userId } = req.params;
     const tenantId = req.user.tenantId;
+    // MUST PASS BOTH userId AND tenantId
+    const tasks = await userService.getUserTasks(userId, tenantId);
 
-    const tasks = await userService.getUserTasks(id, tenantId);
+    console.log('getUserTasks controller - returning tasks:', tasks.length);
 
     res.status(200).json({
       success: true,
@@ -78,7 +80,7 @@ const getUserTasks = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get user tasks error:', error);
+    console.error('Get user tasks controller error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch user tasks',

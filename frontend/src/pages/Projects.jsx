@@ -4,9 +4,10 @@ import { useAuth } from '../context/AuthContext';
 import projectService from '../services/projectService';
 import toast from 'react-hot-toast';
 import { FaPlus, FaEdit, FaTrash, FaTimes, FaProjectDiagram, FaSearch } from 'react-icons/fa';
+import superAdminService from '../services/superAdminService';
 
 const Projects = () => {
-  const { user } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -27,8 +28,15 @@ const Projects = () => {
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      const response = await projectService.getAll();
-      setProjects(response.data.projects || []);
+      if(isSuperAdmin){
+        const response = await superAdminService.getAllProjects();
+        console.log(response.data.projects);
+        setProjects(response.data.projects || []);
+      }
+      else {
+        const response = await projectService.getAll();
+        setProjects(response.data.projects || []);
+      }
     } catch (error) {
       toast.error('Failed to load projects');
       console.error(error);
@@ -137,7 +145,7 @@ const Projects = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Projects</h1>
-          <p className="text-gray-600">Manage your organization's projects</p>
+          <p className="text-gray-600">{isSuperAdmin ? 'View all tenant projects' : 'Manage your organization\'s projects'}</p>
         </div>
         <button
           onClick={handleCreateClick}
@@ -210,6 +218,17 @@ const Projects = () => {
                 <h3 className="text-xl font-bold text-gray-800 mb-2 hover:text-blue-600 transition-colors">
                   {project.name}
                 </h3>
+                {/* ADD THIS: Show tenant info for Super Admin */}
+                {user?.role === 'super_admin' && project.tenant_name && (
+                  <div className="mb-2 flex items-center gap-2">
+                    <span className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full font-medium">
+                      🏢 {project.tenant_name}
+                    </span>
+                    <span className="text-xs text-gray-500 font-mono">
+                      {project.tenant_subdomain}
+                    </span>
+                  </div>
+                )}
                 <p className="text-gray-600 text-sm mb-4 line-clamp-2">
                   {project.description || 'No description provided'}
                 </p>

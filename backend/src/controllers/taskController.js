@@ -82,10 +82,35 @@ const deleteTask = async (req, res) => {
     });
   }
 };
+
+const getUserTasks = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const tenantId = req.user.tenantId;
+
+    const tasks = await userService.getUserTasks(id);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        tasks
+      }
+    });
+  } catch (error) {
+    console.error('Get user tasks error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch user tasks',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   createTask,
   listProjectTasks,
   updateTaskStatus,
   updateTask,
   deleteTask,
+  getUserTasks,
 };

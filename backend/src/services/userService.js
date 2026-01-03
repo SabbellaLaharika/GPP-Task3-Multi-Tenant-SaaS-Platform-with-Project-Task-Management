@@ -274,9 +274,11 @@ const getUserTasks = async (userId, tenantId) => {
   `;
 
   try {
+   
     const result = await pool.query(query, [userId, tenantId]);
     return result.rows;
   } catch (error) {
+    console.error('getUserTasks service error:', error);
     throw new Error(`Database error: ${error.message}`);
   }
 };

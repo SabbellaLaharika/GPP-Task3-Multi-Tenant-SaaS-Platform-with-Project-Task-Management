@@ -6,6 +6,15 @@ const userService = {
     return response.data;
   },
 
+  getUserTasks : async (userId) => {
+    try {
+      const response = await api.get(`api/users/${userId}/tasks`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  
   create: async (tenantId, data) => {
     const response = await api.post(`/api/tenants/${tenantId}/users`, data);
     return response.data;

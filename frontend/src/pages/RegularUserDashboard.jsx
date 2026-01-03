@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import taskService from '../services/taskService';
+import userService from '../services/userService';  
 import toast from 'react-hot-toast';
 import { 
   FaTasks, 
@@ -25,15 +26,40 @@ const RegularUserDashboard = () => {
   });
 
   useEffect(() => {
-    fetchUserData();
-  }, []);
-
+  const debugFetch = async () => {
+    console.log('=== DEBUG START ===');
+    console.log('User:', user);
+    console.log('User ID:', user?.id);
+    
+    if (!user?.id) {
+      console.error('No user ID found!');
+      return;
+    }
+    
+    try {
+      console.log('Calling getUserTasks...');
+      const response = await taskService.getUserTasks(user.id);
+      console.log('Response:', response);
+      console.log('Tasks:', response.data.tasks);
+    } catch (error) {
+      console.error('Error:', error);
+    }
+    console.log('=== DEBUG END ===');
+  };
+  
+  if (user?.id) {
+    debugFetch();
+  }
+  fetchUserData();
+}, [user?.id]);
   const fetchUserData = async () => {
     try {
       setLoading(true);
       
-      // Fetch ONLY tasks assigned to current user
+      // Fetch ONLY tasks assigned to current 
+      console.log(user.id);
       const tasksResponse = await taskService.getUserTasks(user.id);
+      console.log('Tasks Response:', tasksResponse);
       const userTasks = tasksResponse.data.tasks || [];
       setMyTasks(userTasks);
       

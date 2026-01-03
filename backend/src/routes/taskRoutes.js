@@ -10,4 +10,6 @@ router.get('/projects/:projectId/tasks', authenticate, tenantFilter, taskControl
 router.patch('/tasks/:taskId/status', authenticate, tenantFilter, taskController.updateTaskStatus);
 router.put('/tasks/:taskId', authenticate, tenantFilter, validate(schemas.updateTask), taskController.updateTask);
 router.delete('/tasks/:taskId', authenticate, tenantFilter, taskController.deleteTask);
+router.patch('/:id/status', authenticate, taskController.updateTaskStatus);
+router.get('/users/:userId/tasks', authenticate, taskController.getUserTasks);
 module.exports = router;

@@ -1,6 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const { pool } = require('../db/pool');
 const logger = require('../utils/logger');
+const { get } = require('../routes/superAdminRoutes');
 
 const createTask = async (projectId, taskData, tenantId) => {
   try {
@@ -234,10 +235,42 @@ const deleteTask = async (taskId, tenantId, assigned_to) => {
   }
 };
 
+const getUserTasks = async (userId) => {
+  print('Fetching tasks for user:', userId);
+  const query = `
+    SELECT 
+      t.*,
+      p.name as project_name,
+      p.id as project_id
+    FROM tasks t
+    JOIN projects p ON t.project_id = p.id
+    JOIN users u on u.id = t.assigned_to
+    WHERE t.assigned_to = $1
+    ORDER BY 
+      CASE t.status
+        WHEN 'todo' THEN 1
+        WHEN 'in_progress' THEN 2
+        WHEN 'completed' THEN 3
+      END,
+      t.due_date ASC NULLS LAST,
+      t.created_at DESC;
+  `;
+
+  try {
+    const result = await pool.query(query, [userId]);
+    console.log(result.rows);
+    return result.rows;
+  } catch (error) {
+    throw new Error(`Database error: ${error.message}`);
+  }
+};
+
+
 module.exports = {
   createTask,
   listProjectTasks,
   updateTaskStatus,
   updateTask,
   deleteTask,
+  getUserTasks,
 };

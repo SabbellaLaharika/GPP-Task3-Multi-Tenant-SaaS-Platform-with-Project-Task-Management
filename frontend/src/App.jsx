@@ -11,6 +11,8 @@ import Projects from './pages/Projects';
 import ProjectDetails from './pages/ProjectDetails';
 import Users from './pages/Users';
 import Settings from './pages/Settings';
+import Tenants from './pages/Tenants';
+import Profile from './pages/Profile';
 
 // Layout
 import PrivateRoute from './components/Auth/PrivateRoute';
@@ -56,7 +58,10 @@ function App() {
             <Route path="projects/:id" element={<ProjectDetails />} />
             <Route path="users" element={<Users />} />
             <Route path="settings" element={<Settings />} />
-          </Route>
+            <Route path="profile" element={<Profile />} />
+            {/* Super Admin Only Route - ADD THIS */}
+            <Route path="tenants" element={ <Tenants />}  /> 
+          </Route> 
           
           {/* 404 */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
