@@ -77,7 +77,6 @@ const Settings = () => {
     try {
       setLoading(true);
       const response = await tenantService.getDetails(tenantId);
-      console.log(response.data.name.subscription_plan);
       setSelectedTenant(response.data);
       setFormData({
         name: response.data.name,

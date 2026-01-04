@@ -693,7 +693,7 @@ docker pull sabbellalaharika/gpp-task3-backend:latest
 docker pull sabbellalaharika/gpp-task3-frontend:latest
 
 # Pull PostgreSQL image
-docker pull postgres:14
+docker pull postgres:15
 ```
 
 ### Step 2: Create Docker Compose File
@@ -705,7 +705,7 @@ version: '3.8'
 services:
   # PostgreSQL Database
   postgres:
-    image: postgres:14
+    image: postgres:15
     container_name: multitenant-postgres
     environment:
       POSTGRES_DB: multitenant_saas
