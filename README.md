@@ -11,24 +11,24 @@ A comprehensive multi-tenant Software-as-a-Service (SaaS) platform with complete
 
 ## 📋 Table of Contents
 
-- [Overview](#overview)
-- [Features](#features)
-- [System Architecture](#system-architecture)
-- [Technology Stack](#technology-stack)
-- [Project Status](#project-status)
-- [Prerequisites](#prerequisites)
-- [Installation Guide](#installation-guide)
-- [Database Setup](#database-setup)
-- [Configuration](#configuration)
-- [Docker Setup](#docker-setup)           
-- [Running the Application](#running-the-application)
-- [API Documentation](#api-documentation)
-- [Frontend Features](#frontend-features)
-- [Project Structure](#project-structure)
-- [Documentation](#documentation)
-- [Testing](#testing)
-- [Troubleshooting](#troubleshooting)
-- [Future Enhancements](#future-enhancements)
+- [Overview](#-overview)
+- [Features](#-features)
+- [System Architecture](#%EF%B8%8F-system-architecture)
+- [Technology Stack](#%EF%B8%8F-technology-stack)
+- [Project Status](#-project-status)
+- [Prerequisites](#-prerequisites)
+- [Installation Guide](#-installation-guide)
+- [Database Setup](#%EF%B8%8F-database-setup)
+- [Configuration](#%EF%B8%8F-configuration)
+- [Docker Setup](#-docker-setup-quick-start)           
+- [Running the Application](#-running-the-application)
+- [API Documentation](#-api-documentation)
+- [Frontend Features](#-frontend-features)
+- [Project Structure](#-project-structure)
+- [Documentation](#-documentation)
+- [Testing](#-testing)
+- [Troubleshooting](#-troubleshooting)
+- [Future Enhancements](#-future-enhancements)
 
 ---
 
@@ -522,7 +522,7 @@ SELECT id, email, full_name, role FROM users;
 -- Should see:
 -- superadmin@system.com (super_admin)
 -- admin@demo.com (tenant_admin)
--- user@demo.com (user)
+-- user1@demo.com (user)
 
 -- Check projects
 SELECT id, name, status FROM projects;
@@ -968,7 +968,7 @@ Subdomain: system
 
 **Regular User Account:**
 ```
-Email: user@demo.com
+Email: user1@demo.com
 Password: User@123
 Subdomain: demo
 ```
