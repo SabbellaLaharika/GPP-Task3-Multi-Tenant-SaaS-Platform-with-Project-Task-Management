@@ -11,7 +11,7 @@ A comprehensive multi-tenant Software-as-a-Service (SaaS) platform with complete
 
 ## 📋 Table of Contents
 
-- [Overview](##overview)
+- [Overview](#overview)
 - [Features](#features)
 - [System Architecture](#system-architecture)
 - [Technology Stack](#technology-stack)
@@ -28,7 +28,7 @@ A comprehensive multi-tenant Software-as-a-Service (SaaS) platform with complete
 - [Documentation](#documentation)
 - [Testing](#testing)
 - [Troubleshooting](#troubleshooting)
-- [Future Enhancements](##future-enhancements)
+- [Future Enhancements](#future-enhancements)
 
 ---
 
