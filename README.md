@@ -1812,10 +1812,18 @@ multi-tenant-saas-platform/
 │   │   ├── app.js                   # Express app setup
 │   │   └── server.js                # Server entry point
 │   ├── migrations/
-│   │   ├── 001_initial_schema.sql   # Database schema migration
+│   │   ├── 001_create_tenants.sql   # Database schema for tenants table
+│   │   ├── 002_create_users.sql     # Database schema for users table
+│   │   ├── 003_create_projects.sql  # Database schema for projects table
+│   │   ├── 004_create_tasks.sql     # Database schema for tasks table
+│   │   ├── 005_create_audit_logs.sql# Database schema for audit_logs table
 │   │   └── run-migrations.js        # Migration runner script
 │   ├── seeds/
-│   │   ├── 001_seed_data.sql        # Demo data seed
+│   │   ├── seed_projects.js        # Demo data seed for projects
+│   │   ├── seed_super_admin.js     # Demo data seed for super_admin
+│   │   ├── seed_tasks.js           # Demo data seed for tasks
+│   │   ├── seed_tenants.js         # Demo data seed for tenants
+│   │   ├── seed_users.js           # Demo data seed for users
 │   │   └── run-seeds.js             # Seed runner script
 │   ├── .env.example                 # Environment variables template
 │   ├── .gitignore                   # Git ignore rules
