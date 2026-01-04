@@ -292,12 +292,12 @@ const TenantAdminDashboard = () => {
                       <div 
                         className="bg-blue-500 h-2 rounded-full" 
                         style={{ 
-                          width: `${(tenantInfo.total_users / tenantInfo.max_users) * 100}%` 
+                          width: `${(stats.totalUsers / tenantInfo.maxUsers) * 100}%` 
                         }}
                       ></div>
                     </div>
                     <span className="text-sm font-medium text-gray-700">
-                      {tenantInfo.total_users} / {tenantInfo.max_users}
+                      {stats.totalUsers} / {tenantInfo.maxUsers}
                     </span>
                   </div>
                 </div>
@@ -309,12 +309,12 @@ const TenantAdminDashboard = () => {
                       <div 
                         className="bg-purple-500 h-2 rounded-full" 
                         style={{ 
-                          width: `${(tenantInfo.total_projects / tenantInfo.max_projects) * 100}%` 
+                          width: `${(stats.totalProjects / tenantInfo.maxProjects) * 100}%` 
                         }}
                       ></div>
                     </div>
                     <span className="text-sm font-medium text-gray-700">
-                      {tenantInfo.total_projects} / {tenantInfo.max_projects}
+                      {stats.totalProjects} / {tenantInfo.maxProjects}
                     </span>
                   </div>
                 </div>

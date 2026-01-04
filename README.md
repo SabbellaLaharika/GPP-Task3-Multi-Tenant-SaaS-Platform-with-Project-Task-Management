@@ -782,7 +782,7 @@ docker-compose ps
 docker-compose exec backend npm run migrate
 
 # Run seeds
-docker-compose exec backend npm run db:migrate
+docker-compose exec backend npm run seed
 
 ```
 
@@ -1882,7 +1882,7 @@ multi-tenant-saas-platform/
 │   ├── architecture.md               # Architecture documentation
 │   ├── technical-spec.md             # Technical specifications
 │   ├── research.md                   # Research and analysis
-│   └── SETUP-GUIDE.md                # Setup instructions
+│   └── API.md                        # API documentation
 │
 ├── .gitignore                        # Root git ignore
 └── README.md                         # This file

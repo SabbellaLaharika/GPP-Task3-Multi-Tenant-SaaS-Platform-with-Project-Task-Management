@@ -55,12 +55,13 @@ const Settings = () => {
       } else if (isTenantAdmin || selectedTenant) {
         // Tenant admin sees only their tenant
         const response = await tenantService.getDetails(user.tenantId);
-        setTenantData(response.data.name);
+        console.log(response.data);
+        setTenantData(response.data);
         setFormData({
           name: response.data.name,
-          subscriptionPlan: response.data.subscription_plan,
-          maxUsers: response.data.max_users,
-          maxProjects: response.data.max_projects,
+          subscriptionPlan: response.data.subscriptionPlan,
+          maxUsers: response.data.maxUsers,
+          maxProjects: response.data.maxProjects,
           status: response.data.status
         });
       }
@@ -80,9 +81,9 @@ const Settings = () => {
       setSelectedTenant(response.data);
       setFormData({
         name: response.data.name,
-        subscriptionPlan: response.data.subscription_plan,
-        maxUsers: response.data.max_users,
-        maxProjects: response.data.max_projects,
+        subscriptionPlan: response.data.subscriptionPlan,
+        maxUsers: response.data.maxUsers,
+        maxProjects: response.data.maxProjects,
         status: response.data.status
       });
     } catch (error) {
@@ -355,7 +356,7 @@ const Settings = () => {
                 </div>
 
                 {/* Current Usage */}
-                {(tenantData || selectedTenant) && (
+                {(isTenantAdmin || selectedTenant) && (
                   <div className="mt-6 pt-6 border-t">
                     <h3 className="text-lg font-semibold text-gray-800 mb-4">Current Usage</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -366,12 +367,12 @@ const Settings = () => {
                             <div 
                               className="bg-blue-500 h-2 rounded-full" 
                               style={{ 
-                                width: `${((selectedTenant || tenantData).total_users / formData.maxUsers) * 100}%` 
+                                width: `${((selectedTenant || tenantData).stats.totalUsers / formData.maxUsers) * 100}%` 
                               }}
                             ></div>
                           </div>
                           <span className="text-sm font-medium text-gray-700">
-                            {(selectedTenant || tenantData).total_users} / {formData.maxUsers}
+                            {(selectedTenant || tenantData).stats.totalUsers} / {formData.maxUsers}
                           </span>
                         </div>
                       </div>
@@ -382,12 +383,12 @@ const Settings = () => {
                             <div 
                               className="bg-purple-500 h-2 rounded-full" 
                               style={{ 
-                                width: `${((selectedTenant || tenantData).total_projects / formData.maxProjects) * 100}%` 
+                                width: `${((selectedTenant || tenantData).stats.totalProjects / formData.maxProjects) * 100}%` 
                               }}
                             ></div>
                           </div>
                           <span className="text-sm font-medium text-gray-700">
-                            {(selectedTenant || tenantData).total_projects} / {formData.maxProjects}
+                            {(selectedTenant || tenantData).stats.totalProjects} / {formData.maxProjects}
                           </span>
                         </div>
                       </div>

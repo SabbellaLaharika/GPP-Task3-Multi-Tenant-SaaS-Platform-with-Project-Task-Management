@@ -31,12 +31,53 @@
         ],
         "projects": [
           {
-            "name": "Project Alpha",
-            "description": "First demo project"
+            "name": "Website Redesign",
+            "description": "Complete redesign of company website with modern UI/UX",
+            "status" : "active",
+            "tasks" : [
+              {
+                "title": "Design Homepage Layout",
+                "description": "Create wireframes and mockups for the homepage",
+                "assignedTo": "Demo User 1",
+                "status": "in_progress",
+                "priority": "high"
+              },
+              {
+                "title": "Implement Navigation Menu",
+                "description": "Develop responsive navigation menu with dropdown support",
+                "assignedTo" : "Demo User 2",
+                "status" : "todo",
+                "priority" : "medium"
+              },
+              {
+                "title" : "Migrate Content to New CMS",
+                "description" : "Transfer all existing content to the new content management system", 
+                "assignedTo" : "null",
+                "status" : "todo",
+                "priority" : "low"
+              }
+            ]
           },
           {
-            "name": "Project Beta",
-            "description": "Second demo project"
+            "name": "Mobile App Development",
+            "description": "Native mobile application for iOS and Android platforms",
+            "status" : "active",
+            "tasks" : [
+              {
+                "title": "Setup Development Environment",
+                "description" : "Configure React Native, dependencies, and build tools",
+                "assignedTo" : "Demo User 1",
+                "status" : "completed",
+                "priority" : "high"
+              },
+              {
+                "title" : "Design Mobile App Interface",
+                "description" : "Create UI designs for all main screens following iOS and Android guidelines",
+                "assignedTo" : "Demo User 2",
+                "status" : "in_progress",
+                "priority" : "high"
+              }
+            ]
           }
         ]
       }
