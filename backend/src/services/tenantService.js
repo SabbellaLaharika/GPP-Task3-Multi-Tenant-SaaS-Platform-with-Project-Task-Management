@@ -67,18 +67,18 @@ const getTenantDetails = async (tenantId, requestingUserId, requestingUserRole) 
 /**
  * Update tenant
  */
-const updateTenant = async (tenantId, updateData) => {
+const updateTenant = async (tenantId, updateData, requestingUserId) => {
   // Build dynamic UPDATE query
   const fields = Object.keys(updateData);
   const values = Object.values(updateData);
-  
+
   if (fields.length === 0) {
     throw new Error('No fields to update');
   }
 
   // Build SET clause: field1 = $1, field2 = $2, ...
   const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
-  
+
   const query = `
     UPDATE tenants 
     SET ${setClause}, updated_at = NOW()
@@ -91,13 +91,38 @@ const updateTenant = async (tenantId, updateData) => {
 
   try {
     const result = await pool.query(query, [...values, tenantId]);
-    
+
     if (result.rows.length === 0) {
       throw new Error('Tenant not found');
     }
 
-    console.log('updateTenant service - updated tenant:', result.rows[0]);
-    return result.rows[0];
+    const updatedTenant = result.rows[0];
+    console.log('updateTenant service - updated tenant:', updatedTenant);
+
+    // Audit Logging
+    try {
+      const { v4: uuidv4 } = require('uuid'); // ensure uuid is available
+
+      // Log general update
+      await pool.query(
+        `INSERT INTO audit_logs (id, tenant_id, user_id, action, entity_type, entity_id, details)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [uuidv4(), tenantId, requestingUserId, 'UPDATE_TENANT', 'tenant', tenantId, JSON.stringify(updateData)]
+      );
+
+      // Log subscription change specifically if it happened
+      if (updateData.subscription_plan) {
+        await pool.query(
+          `INSERT INTO audit_logs (id, tenant_id, user_id, action, entity_type, entity_id, details)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [uuidv4(), tenantId, requestingUserId, 'SUBSCRIPTION_CHANGE', 'tenant', tenantId, `Changed to ${updateData.subscription_plan}`]
+        );
+      }
+    } catch (auditError) {
+      logger.error('Failed to log tenant update', { error: auditError.message });
+    }
+
+    return updatedTenant;
   } catch (error) {
     console.error('updateTenant service error:', error);
     throw new Error(`Database error: ${error.message}`);

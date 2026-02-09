@@ -8,7 +8,7 @@ const logger = require('../utils/logger');
  */
 const addUserToTenant = async (tenantId, userData, requestingUserId) => {
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
 
@@ -191,6 +191,21 @@ const updateUser = async (userId, updateData, requestingUserId, requestingUserRo
 
     logger.info('User updated', { userId });
 
+    // Log action in audit_logs
+    const client = await pool.connect();
+    try {
+      await client.query(
+        `INSERT INTO audit_logs (id, tenant_id, user_id, action, entity_type, entity_id)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [uuidv4(), requestingUserTenantId || (await getUserTenantId(userId)), requestingUserId, 'UPDATE_USER', 'user', userId]
+      );
+    } catch (auditError) {
+      logger.error('Failed to create audit log', { error: auditError.message });
+      // Don't fail the request if audit logging fails
+    } finally {
+      client.release();
+    }
+
     return {
       success: true,
       message: 'User updated successfully',
@@ -200,6 +215,12 @@ const updateUser = async (userId, updateData, requestingUserId, requestingUserRo
     logger.error('Update user failed', { userId, error: error.message });
     throw error;
   }
+};
+
+// Helper to get tenant ID if not provided (e.g. self update)
+const getUserTenantId = async (userId) => {
+  const res = await pool.query('SELECT tenant_id FROM users WHERE id = $1', [userId]);
+  return res.rows[0]?.tenant_id;
 };
 
 /**
@@ -274,7 +295,7 @@ const getUserTasks = async (userId, tenantId) => {
   `;
 
   try {
-   
+
     const result = await pool.query(query, [userId, tenantId]);
     return result.rows;
   } catch (error) {

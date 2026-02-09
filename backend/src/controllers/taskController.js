@@ -5,7 +5,8 @@ const createTask = async (req, res, next) => {
     const result = await taskService.createTask(
       req.params.projectId,
       req.body,
-      req.tenantId
+      req.tenantId,
+      req.user.id // audit
     );
     res.status(201).json(result);
   } catch (error) {
@@ -35,7 +36,8 @@ const updateTaskStatus = async (req, res, next) => {
     const result = await taskService.updateTaskStatus(
       req.params.taskId,
       req.body.status,
-      req.tenantId
+      req.tenantId,
+      req.user.id // audit
     );
     res.status(200).json(result);
   } catch (error) {
@@ -51,7 +53,8 @@ const updateTask = async (req, res, next) => {
     const result = await taskService.updateTask(
       req.params.taskId,
       req.body,
-      req.tenantId
+      req.tenantId,
+      req.user.id // audit
     );
     res.status(200).json(result);
   } catch (error) {
@@ -67,7 +70,7 @@ const deleteTask = async (req, res) => {
     await taskService.deleteTask(
       req.params.taskId,
       req.tenantId,
-      req.params.assignedto,
+      req.user.id // audit
     );
 
     res.status(200).json({

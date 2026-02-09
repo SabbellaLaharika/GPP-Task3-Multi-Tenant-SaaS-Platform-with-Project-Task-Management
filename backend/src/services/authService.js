@@ -14,7 +14,7 @@ const logger = require('../utils/logger');
  */
 const registerTenant = async (tenantData) => {
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
 
@@ -135,13 +135,24 @@ const login = async (loginData) => {
         'SELECT status FROM tenants WHERE id = $1',
         [user.tenant_id]
       );
-      
+
       if (tenantCheck.rows[0]?.status === 'suspended') {
         throw new Error('Account suspended/inactive');
       }
     }
 
     logger.info('User logged in', { userId: user.id, email: user.email });
+
+    // Log successful login
+    try {
+      await pool.query(
+        `INSERT INTO audit_logs (id, tenant_id, user_id, action, entity_type, entity_id, ip_address)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [uuidv4(), user.tenant_id, user.id, 'LOGIN_SUCCESS', 'user', user.id, null] // IP would need to be passed from controller
+      );
+    } catch (auditError) {
+      logger.error('Failed to log login success', { error: auditError.message });
+    }
 
     // Generate token
     const token = generateToken({
@@ -167,6 +178,23 @@ const login = async (loginData) => {
     };
   } catch (error) {
     logger.error('Login failed', { email, error: error.message });
+
+    // Attempt to log failed login if we can find the user/tenant
+    try {
+      // Re-fetch user to get tenant_id if possible (even if password failed)
+      const userRes = await pool.query('SELECT id, tenant_id FROM users WHERE email = $1', [email]);
+      if (userRes.rows.length > 0) {
+        const u = userRes.rows[0];
+        await pool.query(
+          `INSERT INTO audit_logs (id, tenant_id, user_id, action, entity_type, entity_id, details)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [uuidv4(), u.tenant_id, u.id, 'LOGIN_FAILED', 'user', u.id, error.message]
+        );
+      }
+    } catch (logError) {
+      // Ignore errors during failed login logging to prevent masking original error
+    }
+
     throw error;
   }
 };

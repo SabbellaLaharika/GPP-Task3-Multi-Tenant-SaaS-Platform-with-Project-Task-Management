@@ -3,7 +3,7 @@ const { pool } = require('../db/pool');
 const logger = require('../utils/logger');
 const { get } = require('../routes/superAdminRoutes');
 
-const createTask = async (projectId, taskData, tenantId) => {
+const createTask = async (projectId, taskData, tenantId, userId) => {
   try {
     // Verify project exists and belongs to tenant
     const projectResult = await pool.query(
@@ -46,6 +46,17 @@ const createTask = async (projectId, taskData, tenantId) => {
     );
 
     logger.info('Task created', { taskId, projectId });
+
+    try {
+      await pool.query(
+        `INSERT INTO audit_logs (id, tenant_id, user_id, action, entity_type, entity_id)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [uuidv4(), tenantId, userId, 'CREATE_TASK', 'task', taskId]
+      );
+    } catch (auditError) {
+      logger.error('Failed to create audit log', { error: auditError.message });
+    }
+
     return { success: true, data: result.rows[0] };
   } catch (error) {
     logger.error('Create task failed', { error: error.message });
@@ -57,12 +68,12 @@ const listProjectTasks = async (projectId, tenantId, userRole, filters = {}) => 
   try {
     const { page = 1, limit = 50, status, assignedTo, priority, search } = filters;
     const offset = (page - 1) * limit;
-    
+
     let query;
     let params;
     let countQuery;
     let countParams;
-    
+
     // Super admin can see all tasks
     if (userRole === 'super_admin') {
       query = `
@@ -74,9 +85,9 @@ const listProjectTasks = async (projectId, tenantId, userRole, filters = {}) => 
       params = [projectId];
       countQuery = 'SELECT COUNT(*) FROM tasks WHERE project_id = $1';
       countParams = [projectId];
-      
+
       let paramCounter = 2;
-      
+
       if (status) {
         query += ` AND t.status = $${paramCounter}`;
         countQuery += ` AND status = $${paramCounter}`;
@@ -118,7 +129,7 @@ const listProjectTasks = async (projectId, tenantId, userRole, filters = {}) => 
         t.due_date ASC
         LIMIT $${paramCounter} OFFSET $${paramCounter + 1}`;
       params.push(limit, offset);
-      
+
     } else {
       // Regular tenant admin/user
       query = `
@@ -130,7 +141,7 @@ const listProjectTasks = async (projectId, tenantId, userRole, filters = {}) => 
       params = [projectId, tenantId];
       countQuery = 'SELECT COUNT(*) FROM tasks WHERE project_id = $1 AND tenant_id = $2';
       countParams = [projectId, tenantId];
-      
+
       let paramCounter = 3;
 
       if (status) {
@@ -197,7 +208,7 @@ const listProjectTasks = async (projectId, tenantId, userRole, filters = {}) => 
   }
 };
 
-const updateTaskStatus = async (taskId, status, tenantId) => {
+const updateTaskStatus = async (taskId, status, tenantId, userId) => {
   try {
     const result = await pool.query(
       `UPDATE tasks 
@@ -212,6 +223,17 @@ const updateTaskStatus = async (taskId, status, tenantId) => {
     }
 
     logger.info('Task status updated', { taskId, status });
+
+    try {
+      await pool.query(
+        `INSERT INTO audit_logs (id, tenant_id, user_id, action, entity_type, entity_id)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [uuidv4(), tenantId, userId, 'UPDATE_TASK_STATUS', 'task', taskId]
+      );
+    } catch (auditError) {
+      logger.error('Failed to create audit log', { error: auditError.message });
+    }
+
     return { success: true, data: result.rows[0] };
   } catch (error) {
     logger.error('Update task status failed', { error: error.message });
@@ -219,7 +241,7 @@ const updateTaskStatus = async (taskId, status, tenantId) => {
   }
 };
 
-const updateTask = async (taskId, updateData, tenantId) => {
+const updateTask = async (taskId, updateData, tenantId, userId) => {
   try {
     const fields = [];
     const values = [];
@@ -284,6 +306,17 @@ const updateTask = async (taskId, updateData, tenantId) => {
     }
 
     logger.info('Task updated', { taskId });
+
+    try {
+      await pool.query(
+        `INSERT INTO audit_logs (id, tenant_id, user_id, action, entity_type, entity_id)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [uuidv4(), tenantId, userId, 'UPDATE_TASK', 'task', taskId]
+      );
+    } catch (auditError) {
+      logger.error('Failed to create audit log', { error: auditError.message });
+    }
+
     return { success: true, message: 'Task updated successfully', data: result.rows[0] };
   } catch (error) {
     logger.error('Update task failed', { error: error.message });
@@ -291,7 +324,7 @@ const updateTask = async (taskId, updateData, tenantId) => {
   }
 };
 
-const deleteTask = async (taskId, tenantId, assigned_to) => {
+const deleteTask = async (taskId, tenantId, userId) => {
   try {
     const result = await pool.query(
       'DELETE FROM tasks WHERE id = $1 AND tenant_id = $2 RETURNING id',
@@ -303,6 +336,17 @@ const deleteTask = async (taskId, tenantId, assigned_to) => {
     }
 
     logger.info('Task deleted', { taskId });
+
+    try {
+      await pool.query(
+        `INSERT INTO audit_logs (id, tenant_id, user_id, action, entity_type, entity_id)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [uuidv4(), tenantId, userId, 'DELETE_TASK', 'task', taskId]
+      );
+    } catch (auditError) {
+      logger.error('Failed to create audit log', { error: auditError.message });
+    }
+
     return { success: true, message: 'Task deleted successfully' };
   } catch (error) {
     logger.error('Delete task failed', { error: error.message });

@@ -23,7 +23,7 @@ const updateTenant = async (req, res) => {
     const userRole = req.user.role;
     // Super admin can update everything
     // Tenant admin can only update name
-    const allowedFields = userRole === 'super_admin' 
+    const allowedFields = userRole === 'super_admin'
       ? ['name', 'subscription_plan', 'max_users', 'max_projects', 'status']
       : ['name'];
 
@@ -43,7 +43,7 @@ const updateTenant = async (req, res) => {
       });
     }
 
-    const updatedTenant = await tenantService.updateTenant(tenantId, filteredData);
+    const updatedTenant = await tenantService.updateTenant(tenantId, filteredData, req.user.id);
 
     console.log('updateTenant controller - result:', updatedTenant);
 

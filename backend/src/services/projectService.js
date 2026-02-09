@@ -4,7 +4,7 @@ const logger = require('../utils/logger');
 
 const createProject = async (projectData, userId, tenantId) => {
   const client = await pool.connect();
-  
+
   try {
     await client.query('BEGIN');
 
@@ -30,12 +30,23 @@ const createProject = async (projectData, userId, tenantId) => {
       `INSERT INTO projects (id, tenant_id, name, description, status, created_by)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [projectId, tenantId, projectData.name, projectData.description || null, 
-       projectData.status || 'active', userId]
+      [projectId, tenantId, projectData.name, projectData.description || null,
+        projectData.status || 'active', userId]
     );
 
     await client.query('COMMIT');
     logger.info('Project created', { projectId, tenantId });
+
+    // Log action (separate transaction or after commit)
+    try {
+      await pool.query(
+        `INSERT INTO audit_logs (id, tenant_id, user_id, action, entity_type, entity_id)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [uuidv4(), tenantId, userId, 'CREATE_PROJECT', 'project', projectId]
+      );
+    } catch (auditError) {
+      logger.error('Failed to create audit log', { error: auditError.message });
+    }
 
     return { success: true, data: result.rows[0] };
   } catch (error) {
@@ -143,6 +154,17 @@ const updateProject = async (projectId, updateData, userId, tenantId) => {
     }
 
     logger.info('Project updated', { projectId });
+
+    try {
+      await pool.query(
+        `INSERT INTO audit_logs (id, tenant_id, user_id, action, entity_type, entity_id)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [uuidv4(), tenantId, userId, 'UPDATE_PROJECT', 'project', projectId]
+      );
+    } catch (auditError) {
+      logger.error('Failed to create audit log', { error: auditError.message });
+    }
+
     return { success: true, message: 'Project updated successfully', data: result.rows[0] };
   } catch (error) {
     logger.error('Update project failed', { error: error.message });
@@ -150,7 +172,7 @@ const updateProject = async (projectId, updateData, userId, tenantId) => {
   }
 };
 
-const deleteProject = async (projectId, tenantId) => {
+const deleteProject = async (projectId, tenantId, userId) => {
   try {
     const result = await pool.query(
       'DELETE FROM projects WHERE id = $1 AND tenant_id = $2 RETURNING id',
@@ -162,6 +184,17 @@ const deleteProject = async (projectId, tenantId) => {
     }
 
     logger.info('Project deleted', { projectId });
+
+    try {
+      await pool.query(
+        `INSERT INTO audit_logs (id, tenant_id, user_id, action, entity_type, entity_id)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [uuidv4(), tenantId, userId, 'DELETE_PROJECT', 'project', projectId]
+      );
+    } catch (auditError) {
+      logger.error('Failed to create audit log', { error: auditError.message });
+    }
+
     return { success: true, message: 'Project deleted successfully' };
   } catch (error) {
     logger.error('Delete project failed', { error: error.message });
@@ -172,7 +205,7 @@ const deleteProject = async (projectId, tenantId) => {
 
 // const getAllProjectsForSuperAdmin = async (filters = {}) => {
 //   const { status, search, sortBy = 'created_at', order = 'DESC' } = filters;
-  
+
 //   let query = `
 //     SELECT 
 //       p.*,
@@ -185,7 +218,7 @@ const deleteProject = async (projectId, tenantId) => {
 //     LEFT JOIN tasks tk ON p.id = tk.project_id
 //     WHERE 1=1
 //   `;
-  
+
 //   const params = [];
 //   let paramCount = 0;
 

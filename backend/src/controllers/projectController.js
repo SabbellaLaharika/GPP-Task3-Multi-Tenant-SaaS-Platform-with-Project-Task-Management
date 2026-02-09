@@ -46,7 +46,8 @@ const deleteProject = async (req, res, next) => {
   try {
     const result = await projectService.deleteProject(
       req.params.projectId,
-      req.tenantId
+      req.tenantId,
+      req.user.id // Pass userId for audit logging
     );
     res.status(200).json(result);
   } catch (error) {

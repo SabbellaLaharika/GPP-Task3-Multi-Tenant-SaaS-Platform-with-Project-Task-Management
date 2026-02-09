@@ -416,26 +416,63 @@ res.status(400).json({ error: 'User not found in database table users' })
 
 ### 3.3 🔐 Additional Measures
 
-**📋 Audit logging:**  
-We log important actions to the `audit_logs` table:
+**📋 Audit logging (Immutable):**  
+We log all critical actions to the `audit_logs` table. This is not just for debugging; it is a **compliance requirement**.
 - ✅ User creation/deletion
 - ✅ Project creation/updates
 - ✅ Login attempts (successful and failed)
 - ✅ Permission changes
 - ✅ Subscription changes
 
-Each log includes: user_id, tenant_id, action, entity_type, entity_id, timestamp, ip_address.
+**Why Immutability Matters:** The database user for the application should arguably not have `DELETE` or `UPDATE` permissions on the `audit_logs` table. This ensures that even if an attacker compromises the application layer, they cannot cover their tracks by wiping the logs.
 
-**🔒 HTTPS only:**  
-In production, all traffic goes over TLS. No plain HTTP.
+**🔒 HTTPS Only (Transport Security):**  
+In production, all traffic goes over TLS 1.3. We use HSTS (HTTP Strict Transport Security) headers to force browsers to never connect via plain HTTP. This prevents Man-in-the-Middle (MitM) attacks where an attacker might strip SSL/TLS.
 
-**🔑 Environment variables:**  
-Secrets (JWT secret, database password) live in .env files, never in code. .env files are in .gitignore.
+**🔑 Environment Variables & Secrets Management:**  
+Secrets (JWT secret, database password, API keys) live in `.env` files, never in the source code.
+- `.env` files are strictly included in `.gitignore`.
+- In production (Docker), these are injected as environment variables at runtime.
+- We rotate these keys periodically using a secrets management strategy.
 
-**🔍 Dependency security:**  
-Run `npm audit` regularly. Update packages with known vulnerabilities.
+**🔍 Dependency Security (Supply Chain):**  
+We run `npm audit` regularly to catch known vulnerabilities in our dependency tree. We also use tools like Snyk or GitHub Dependabot in our CI/CD pipeline to block pull requests that introduce vulnerable packages.
+
+**🛡️ Session Management (JWT Revocation):**
+While JWTs are stateless, we handle "logout" scenarios by rotating the secrets or implementing a "denylist" in Redis for revoked tokens if immediate termination is required before the 24-hour expiry.
 
 ---
+
+### 3.4 📈 Scalability & Performance Analysis
+
+**Horizontal vs. Vertical Scaling:**
+Our architecture is designed primarily for **horizontal scaling**. 
+- **Application Layer**: Since the backend is stateless (JWT auth), we can run multiple instances of the Node.js API behind a load balancer (like Nginx). If traffic spikes, we just spin up more containers.
+- **Database Layer**: PostgreSQL handles vertical scaling (bigger server) well up to a point. For read-heavy workloads, we can introduce Read Replicas.
+
+**Bottleneck Analysis:**
+1.  **Database Connections**: Shared schema means all tenants share the connection pool. We use `pg-pool` to manage this, but a "noisy neighbor" could exhaust connections. *Mitigation*: Implement aggressive query timeouts and tenant-level rate limiting.
+2.  **Storage I/O**: High-volume tenants could saturate disk I/O. *Mitigation*: Move blob storage (files, avatars) to object storage (S3) instead of database, keeping the DB strictly for relational data.
+
+### 3.5 🔄 Data Migration Strategy
+
+A critical risk with "Shared Schema" is that a tenant might outgrow it or demand isolation later. We have a planned **ejection path**:
+
+1.  **Tenant Export**: A background job dumps all rows with `WHERE tenant_id = X` to a `.sql` file.
+2.  **Schema Provisioning**: Create a new, dedicated PostgreSQL database for the tenant.
+3.  **Data Import**: Restore the dump to the new database.
+4.  **Router Update**: Update the tenant's record in the central `tenants` table to point to a specific DB connection string instead of the default pool.
+
+This "Hybrid" capability allows us to start cheap (shared) and upsell enterprise clients to dedicated instances without code changes.
+
+### 3.6 ⚖️ Compliance & Data Privacy (GDPR/CCPA)
+
+Multi-tenancy complicates privacy compliance. 
+- **Right to be Forgotten**: Because all data is tagged with `tenant_id` and foreign keys cascaded, deleting a tenant (or user) is a single atomic transaction. This makes compliance easier than in distributed (microservices) systems where data is scattered.
+- **Data Residency**: If a client requires data to stay in the EU, the Shared Schema approach is checking. In that specific case, we would use the "Separate Database" pattern (Pattern 3) for that specific client, provisioning a DB in the Frankfurt region.
+
+---
+
 
 ## 4. 📝 Summary
 
@@ -461,4 +498,3 @@ The tech stack (Node.js, Express, React, PostgreSQL, JWT, Docker) is proven and 
 Security is handled through multiple layers: strong authentication, role-based authorization, automatic tenant filtering, secure password hashing, and API hardening. The shared schema approach has risks, but they're manageable with proper engineering discipline.
 
 This foundation lets us build quickly while maintaining the security and reliability that customers expect from a SaaS platform.
-
