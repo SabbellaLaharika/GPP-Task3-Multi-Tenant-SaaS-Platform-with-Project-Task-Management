@@ -31,12 +31,16 @@ const updateProject = async (req, res, next) => {
       req.params.projectId,
       req.body,
       req.user.id,
-      req.tenantId
+      req.tenantId,
+      req.user.role
     );
     res.status(200).json(result);
   } catch (error) {
     if (error.message === 'Project not found') {
       return res.status(404).json({ success: false, message: error.message });
+    }
+    if (error.message === 'Unauthorized access') {
+      return res.status(403).json({ success: false, message: error.message });
     }
     next(error);
   }
@@ -47,12 +51,16 @@ const deleteProject = async (req, res, next) => {
     const result = await projectService.deleteProject(
       req.params.projectId,
       req.tenantId,
-      req.user.id // Pass userId for audit logging
+      req.user.id, // Pass userId for audit logging
+      req.user.role
     );
     res.status(200).json(result);
   } catch (error) {
     if (error.message === 'Project not found') {
       return res.status(404).json({ success: false, message: error.message });
+    }
+    if (error.message === 'Unauthorized access') {
+      return res.status(403).json({ success: false, message: error.message });
     }
     next(error);
   }

@@ -145,6 +145,11 @@ const listTenantUsers = async (tenantId, filters = {}) => {
  */
 const updateUser = async (userId, updateData, requestingUserId, requestingUserRole) => {
   try {
+    // Enforce: Only admin can update others. Regular users can only update themselves.
+    if (requestingUserRole !== 'tenant_admin' && userId !== requestingUserId) {
+      throw new Error('Unauthorized access');
+    }
+
     const allowedFields = [];
     const values = [];
     let paramCounter = 1;

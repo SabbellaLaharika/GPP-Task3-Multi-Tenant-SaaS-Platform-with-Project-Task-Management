@@ -59,6 +59,17 @@ const registerTenant = async (tenantData) => {
 
     logger.info('Tenant registered successfully', { tenantId, subdomain });
 
+    // Audit Log for Tenant Registration (using pool since transaction committed)
+    try {
+      await pool.query(
+        `INSERT INTO audit_logs (id, tenant_id, user_id, action, entity_type, entity_id, ip_address)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [uuidv4(), tenantId, user.id, 'REGISTER_TENANT', 'tenant', tenantId, null]
+      );
+    } catch (auditError) {
+      logger.error('Failed to log tenant registration', { error: auditError.message });
+    }
+
     // Generate token
     const token = generateToken({
       userId: user.id,
@@ -73,7 +84,7 @@ const registerTenant = async (tenantData) => {
       data: {
         tenantId: tenant.id,
         subdomain: tenant.subdomain,
-        user: {
+        adminUser: {
           id: user.id,
           email: user.email,
           fullName: user.full_name,
@@ -98,6 +109,14 @@ const login = async (loginData) => {
   const { email, password, tenantSubdomain, tenantId } = loginData;
 
   try {
+    // If subdomain provided, verify it exists first (as per Spec 404 requirement)
+    if (tenantSubdomain) {
+      const tenantCheck = await pool.query('SELECT id FROM tenants WHERE subdomain = $1', [tenantSubdomain]);
+      if (tenantCheck.rows.length === 0) {
+        throw new Error('Tenant not found');
+      }
+    }
+
     let query = `
       SELECT u.*, t.subdomain, t.subscription_plan, t.max_users, t.max_projects
       FROM users u
@@ -186,9 +205,9 @@ const login = async (loginData) => {
       if (userRes.rows.length > 0) {
         const u = userRes.rows[0];
         await pool.query(
-          `INSERT INTO audit_logs (id, tenant_id, user_id, action, entity_type, entity_id, details)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-          [uuidv4(), u.tenant_id, u.id, 'LOGIN_FAILED', 'user', u.id, error.message]
+          `INSERT INTO audit_logs (id, tenant_id, user_id, action, entity_type, entity_id)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [uuidv4(), u.tenant_id, u.id, 'LOGIN_FAILED', 'user', u.id]
         );
       }
     } catch (logError) {
@@ -244,8 +263,25 @@ const getCurrentUser = async (userId) => {
   }
 };
 
+const logout = async (userId, tenantId) => {
+  try {
+    await pool.query(
+      `INSERT INTO audit_logs (id, tenant_id, user_id, action, entity_type, entity_id, ip_address)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [uuidv4(), tenantId, userId, 'LOGOUT_SUCCESS', 'user', userId, null]
+    );
+    logger.info('User logged out', { userId });
+    return { success: true, message: 'Logged out successfully' };
+  } catch (error) {
+    logger.error('Logout logging failed', { userId, error: error.message });
+    // Still return success to user/frontend
+    return { success: true, message: 'Logged out successfully' };
+  }
+};
+
 module.exports = {
   registerTenant,
   login,
   getCurrentUser,
+  logout,
 };

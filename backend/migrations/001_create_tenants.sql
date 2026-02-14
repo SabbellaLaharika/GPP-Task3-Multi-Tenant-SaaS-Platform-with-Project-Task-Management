@@ -30,7 +30,7 @@ BEGIN
         NEW.max_projects := 15;
     ELSIF NEW.subscription_plan = 'enterprise' THEN
         NEW.max_users := 100;
-        NEW.max_projects := 100;
+        NEW.max_projects := 50;
     END IF;
     RETURN NEW;
 END;

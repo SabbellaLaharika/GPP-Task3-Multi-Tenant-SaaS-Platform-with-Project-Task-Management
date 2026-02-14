@@ -5,7 +5,7 @@ const logger = require('./utils/logger');
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
 
 // Import routes
-const healthRoutes = require('./routes/healthRoutes'); 
+const healthRoutes = require('./routes/healthRoutes');
 const authRoutes = require('./routes/authRoutes');
 const tenantRoutes = require('./routes/tenantRoutes');
 const userRoutes = require('./routes/userRoutes');
@@ -13,6 +13,8 @@ const projectRoutes = require('./routes/projectRoutes');
 const taskRoutes = require('./routes/taskRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const superAdminRoutes = require('./routes/superAdminRoutes');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpecs = require('./config/swagger');
 
 const app = express();
 
@@ -44,6 +46,15 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/api', healthRoutes);
+
+// Swagger Documentation
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs, {
+  swaggerOptions: {
+    operationsSorter: null, // Disable sorting to respect JSON order
+    tagsSorter: null // Disable tag sorting (optional, but good for custom order)
+  }
+}));
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/tenants', tenantRoutes);

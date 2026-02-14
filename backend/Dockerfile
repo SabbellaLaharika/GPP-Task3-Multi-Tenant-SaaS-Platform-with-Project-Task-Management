@@ -17,8 +17,9 @@ COPY . .
 EXPOSE 5000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s \
-  CMD node -e "require('http').get('http://localhost:5000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+# Copy entrypoint script
+COPY entrypoint.sh .
+RUN chmod +x entrypoint.sh
 
-# Start application
-CMD ["sh", "-c", "npm run migrate && npm run seed && node src/server.js"]
+# Start application using entrypoint
+ENTRYPOINT ["./entrypoint.sh"]

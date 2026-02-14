@@ -4,13 +4,16 @@ const getTenantDetails = async (req, res, next) => {
   try {
     const result = await tenantService.getTenantDetails(
       req.params.tenantId,
-      req.user.id,
+      req.user.tenantId,
       req.user.role
     );
     res.status(200).json(result);
   } catch (error) {
     if (error.message === 'Tenant not found') {
       return res.status(404).json({ success: false, message: error.message });
+    }
+    if (error.message === 'Unauthorized access') {
+      return res.status(403).json({ success: false, message: error.message });
     }
     next(error);
   }
@@ -23,6 +26,19 @@ const updateTenant = async (req, res) => {
     const userRole = req.user.role;
     // Super admin can update everything
     // Tenant admin can only update name
+    // Check for restricted fields for non-super-admins
+    if (userRole !== 'super_admin') {
+      const restrictedFields = ['subscription_plan', 'max_users', 'max_projects', 'status'];
+      const attemptedRestrictedUpdates = restrictedFields.filter(field => updateData[field] !== undefined);
+
+      if (attemptedRestrictedUpdates.length > 0) {
+        return res.status(403).json({
+          success: false,
+          message: `You are not authorized to update: ${attemptedRestrictedUpdates.join(', ')}`
+        });
+      }
+    }
+
     const allowedFields = userRole === 'super_admin'
       ? ['name', 'subscription_plan', 'max_users', 'max_projects', 'status']
       : ['name'];
@@ -33,8 +49,6 @@ const updateTenant = async (req, res) => {
         filteredData[field] = updateData[field];
       }
     });
-
-    console.log('updateTenant controller - filteredData:', filteredData);
 
     if (Object.keys(filteredData).length === 0) {
       return res.status(400).json({

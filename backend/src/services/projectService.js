@@ -112,8 +112,29 @@ const listProjects = async (tenantId, filters = {}) => {
   }
 };
 
-const updateProject = async (projectId, updateData, userId, tenantId) => {
+const updateProject = async (projectId, updateData, userId, tenantId, userRole) => {
   try {
+    const client = await pool.connect();
+
+    // Check authorization: tenant_admin OR project creator
+    if (userRole !== 'tenant_admin') {
+      const projectCheck = await client.query(
+        'SELECT created_by FROM projects WHERE id = $1 AND tenant_id = $2',
+        [projectId, tenantId]
+      );
+
+      if (projectCheck.rows.length === 0) {
+        client.release();
+        throw new Error('Project not found');
+      }
+
+      if (projectCheck.rows[0].created_by !== userId) {
+        client.release();
+        throw new Error('Unauthorized access');
+      }
+    }
+    client.release();
+
     const fields = [];
     const values = [];
     let counter = 1;
@@ -172,8 +193,29 @@ const updateProject = async (projectId, updateData, userId, tenantId) => {
   }
 };
 
-const deleteProject = async (projectId, tenantId, userId) => {
+const deleteProject = async (projectId, tenantId, userId, userRole) => {
   try {
+    const client = await pool.connect();
+
+    // Check authorization: tenant_admin OR project creator
+    if (userRole !== 'tenant_admin') {
+      const projectCheck = await client.query(
+        'SELECT created_by FROM projects WHERE id = $1 AND tenant_id = $2',
+        [projectId, tenantId]
+      );
+
+      if (projectCheck.rows.length === 0) {
+        client.release();
+        throw new Error('Project not found');
+      }
+
+      if (projectCheck.rows[0].created_by !== userId) {
+        client.release();
+        throw new Error('Unauthorized access');
+      }
+    }
+    client.release();
+
     const result = await pool.query(
       'DELETE FROM projects WHERE id = $1 AND tenant_id = $2 RETURNING id',
       [projectId, tenantId]

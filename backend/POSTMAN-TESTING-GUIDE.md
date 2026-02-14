@@ -111,9 +111,10 @@ Content-Type: application/json
       "name": "Test Company",
       "subdomain": "testco"
     },
-    "user": {
+    "adminuser": {
       "id": "...",
       "email": "admin@testco.com",
+      "fullName" : "Test Admin",
       "role": "tenant_admin"
     },
     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."

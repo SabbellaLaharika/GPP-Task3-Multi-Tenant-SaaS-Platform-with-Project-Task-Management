@@ -9,9 +9,12 @@ const logger = require('../utils/logger');
 /**
  * Get tenant details with stats
  */
-const getTenantDetails = async (tenantId, requestingUserId, requestingUserRole) => {
+const getTenantDetails = async (tenantId, requestingUserTenantId, requestingUserRole) => {
   try {
-    // Get tenant basic info
+    // Enforce tenant isolation
+    if (requestingUserRole !== 'super_admin' && requestingUserTenantId !== tenantId) {
+      throw new Error('Unauthorized access');
+    }
     const tenantResult = await pool.query(
       `SELECT id, name, subdomain, status, subscription_plan, 
               max_users, max_projects, created_at, updated_at
@@ -105,17 +108,17 @@ const updateTenant = async (tenantId, updateData, requestingUserId) => {
 
       // Log general update
       await pool.query(
-        `INSERT INTO audit_logs (id, tenant_id, user_id, action, entity_type, entity_id, details)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [uuidv4(), tenantId, requestingUserId, 'UPDATE_TENANT', 'tenant', tenantId, JSON.stringify(updateData)]
+        `INSERT INTO audit_logs (id, tenant_id, user_id, action, entity_type, entity_id)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [uuidv4(), tenantId, requestingUserId, 'UPDATE_TENANT', 'tenant', tenantId]
       );
 
       // Log subscription change specifically if it happened
       if (updateData.subscription_plan) {
         await pool.query(
-          `INSERT INTO audit_logs (id, tenant_id, user_id, action, entity_type, entity_id, details)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-          [uuidv4(), tenantId, requestingUserId, 'SUBSCRIPTION_CHANGE', 'tenant', tenantId, `Changed to ${updateData.subscription_plan}`]
+          `INSERT INTO audit_logs (id, tenant_id, user_id, action, entity_type, entity_id)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [uuidv4(), tenantId, requestingUserId, 'SUBSCRIPTION_CHANGE', 'tenant', tenantId]
         );
       }
     } catch (auditError) {

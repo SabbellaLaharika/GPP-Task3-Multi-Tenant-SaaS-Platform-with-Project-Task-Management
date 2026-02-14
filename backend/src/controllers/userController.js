@@ -42,6 +42,9 @@ const updateUser = async (req, res, next) => {
     if (error.message === 'User not found') {
       return res.status(404).json({ success: false, message: error.message });
     }
+    if (error.message === 'Unauthorized access') {
+      return res.status(403).json({ success: false, message: error.message });
+    }
     next(error);
   }
 };
