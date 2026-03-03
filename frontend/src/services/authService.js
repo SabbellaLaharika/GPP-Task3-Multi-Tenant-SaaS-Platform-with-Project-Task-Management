@@ -2,19 +2,19 @@ import api from './api';
 
 const authService = {
   register: async (data) => {
-    const response = await api.post('/api/auth/register-tenant', data);
+    const response = await api.post('/auth/register-tenant', data);
     if (response.data.data.token) {
       localStorage.setItem('token', response.data.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.data.user));
-      localStorage.setItem('tenantId',response.data.data.user?.tenantId || response.data.data.tenantId
-);
+      localStorage.setItem('tenantId', response.data.data.user?.tenantId || response.data.data.tenantId
+      );
 
     }
     return response.data;
   },
 
   login: async (credentials) => {
-    const response = await api.post('/api/auth/login', credentials);
+    const response = await api.post('/auth/login', credentials);
     if (response.data.data.token) {
       localStorage.setItem('token', response.data.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.data.user));
@@ -25,7 +25,7 @@ const authService = {
 
   logout: async () => {
     try {
-      await api.post('/api/auth/logout');
+      await api.post('/auth/logout');
     } finally {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
@@ -35,7 +35,7 @@ const authService = {
   },
 
   getCurrentUser: async () => {
-    const response = await api.get('/api/auth/me');
+    const response = await api.get('/auth/me');
 
     if (response.data.data) {
       const apiUser = response.data.data;
@@ -46,7 +46,7 @@ const authService = {
         fullName: apiUser.fullName,
         role: apiUser.role,
         isActive: apiUser.isActive,
-        tenantId: apiUser.tenant?.id || null, 
+        tenantId: apiUser.tenant?.id || null,
         tenant: apiUser.tenant || null,
       };
 
@@ -58,7 +58,7 @@ const authService = {
     return response.data;
   },
 
-   getTenantId: () => {
+  getTenantId: () => {
     const user = authService.getStoredUser();
     return user?.tenantId || localStorage.getItem('tenantId');
   },
