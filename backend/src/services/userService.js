@@ -14,6 +14,15 @@ const addUserToTenant = async (tenantId, userData, requestingUserId) => {
 
     const { email, password, fullName, role = 'user' } = userData;
 
+    const requestingUserDetails = await client.query(
+      'SELECT tenant_id, role from users where id = $1', [requestingUserId]
+    );
+
+    if (requestingUserDetails.rows.length > 0) {
+      if (requestingUserDetails.rows[0].role !== "tenant_admin" || requestingUserDetails.rows[0].tenant_id !== tenantId) {
+        throw new Error('Unauthorized access');
+      }
+    }
     // Check tenant limits
     const tenantResult = await client.query(
       'SELECT max_users FROM tenants WHERE id = $1',
@@ -58,6 +67,18 @@ const addUserToTenant = async (tenantId, userData, requestingUserId) => {
       [userId, tenantId, email, hashedPassword, fullName, role, true]
     );
 
+    const createdUser = result.rows[0];
+
+    const data = {
+      id: createdUser.id,
+      email: createdUser.email,
+      fullName: createdUser.full_name,
+      role: createdUser.role,
+      tenantId: createdUser.tenant_id,
+      isActive: createdUser.is_active,
+      createdAt: createdUser.created_at
+    }
+
     // Log action in audit_logs
     await client.query(
       `INSERT INTO audit_logs (id, tenant_id, user_id, action, entity_type, entity_id)
@@ -72,9 +93,10 @@ const addUserToTenant = async (tenantId, userData, requestingUserId) => {
     return {
       success: true,
       message: 'User created successfully',
-      data: result.rows[0],
+      data: data,
     };
   } catch (error) {
+    console.log(error.message);
     await client.query('ROLLBACK');
     logger.error('Create user failed', { tenantId, error: error.message });
     throw error;
@@ -88,52 +110,82 @@ const addUserToTenant = async (tenantId, userData, requestingUserId) => {
  */
 const listTenantUsers = async (tenantId, filters = {}) => {
   try {
-    const { page = 1, limit = 50, search, role } = filters;
+    let { search, role, page = 1, limit = 50 } = filters;
+
+    page = parseInt(page);
+    limit = parseInt(limit);
+
+    if (page < 1) page = 1;
+    if (limit < 1) limit = 50;
+    if (limit > 100) limit = 100;
+
     const offset = (page - 1) * limit;
 
-    let query = `
-      SELECT id, email, full_name, role, is_active, created_at
-      FROM users
-      WHERE tenant_id = $1
-    `;
+    // Build dynamic filters
+    const conditions = ['tenant_id = $1'];
     const params = [tenantId];
-    let paramCounter = 2;
+    let paramIndex = 2;
 
     if (search) {
-      query += ` AND (email ILIKE $${paramCounter} OR full_name ILIKE $${paramCounter})`;
+      conditions.push(`(email ILIKE $${paramIndex} OR full_name ILIKE $${paramIndex})`);
       params.push(`%${search}%`);
-      paramCounter++;
+      paramIndex++;
     }
 
     if (role) {
-      query += ` AND role = $${paramCounter++}`;
+      conditions.push(`role = $${paramIndex}`);
       params.push(role);
+      paramIndex++;
     }
 
-    query += ` ORDER BY created_at DESC LIMIT $${paramCounter++} OFFSET $${paramCounter++}`;
-    params.push(limit, offset);
+    const whereClause = conditions.join(' AND ');
 
-    const result = await pool.query(query, params);
+    // Main query
+    const usersQuery = `
+      SELECT id, email, full_name, role, is_active, created_at
+      FROM users
+      WHERE ${whereClause}
+      ORDER BY created_at DESC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+    `;
 
-    // Get total count
-    let countQuery = 'SELECT COUNT(*) FROM users WHERE tenant_id = $1';
-    const countParams = [tenantId];
+    const usersParams = [...params, limit, offset];
 
-    const countResult = await pool.query(countQuery, countParams);
+    const usersResult = await pool.query(usersQuery, usersParams);
+
+    const users = usersResult.rows.map((user) => ({
+      id: user.id,
+      email: user.email,
+      fullName: user.full_name,
+      role: user.role,
+      isActive: user.is_active,
+      createdAt: user.created_at
+    }));
+
+    // Count query
+    const countQuery = `
+      SELECT COUNT(*) 
+      FROM users
+      WHERE ${whereClause}
+    `;
+
+    const countResult = await pool.query(countQuery, params);
     const total = parseInt(countResult.rows[0].count);
 
     return {
       success: true,
+      message: 'Users fetched successfully',
       data: {
-        users: result.rows,
-        total: total,
+        users: users,
+        total,
         pagination: {
           currentPage: page,
           totalPages: Math.ceil(total / limit),
-          limit: limit,
-        },
-      },
+          limit
+        }
+      }
     };
+
   } catch (error) {
     logger.error('List users failed', { tenantId, error: error.message });
     throw error;
@@ -143,57 +195,55 @@ const listTenantUsers = async (tenantId, filters = {}) => {
 /**
  * Update user
  */
-const updateUser = async (userId, updateData, requestingUserId, requestingUserRole) => {
+const updateUser = async (userId, updateData, requestingUserId, requestingUserRole, requestingUserTenantId) => {
   try {
-    // Enforce: Only admin can update others. Regular users can only update themselves.
-    if (requestingUserRole !== 'tenant_admin' && userId !== requestingUserId) {
-      throw new Error('Unauthorized access');
-    }
 
-    const allowedFields = [];
-    const values = [];
-    let paramCounter = 1;
-
-    // Users can update their own fullName
-    if (updateData.fullName) {
-      allowedFields.push(`full_name = $${paramCounter++}`);
-      values.push(updateData.fullName);
-    }
-
-    // Only tenant_admin can update role and isActive
-    if (requestingUserRole === 'tenant_admin') {
-      if (updateData.role) {
-        allowedFields.push(`role = $${paramCounter++}`);
-        values.push(updateData.role);
-      }
-      if (updateData.isActive !== undefined) {
-        allowedFields.push(`is_active = $${paramCounter++}`);
-        values.push(updateData.isActive);
+    // Tenant admin can update everything
+    // Users can update ownly their fullName
+    if (requestingUserRole !== 'tenant_admin') {
+      if (updateData.role || updateData.isActive || requestingUserRole === 'super_admin') {
+        throw new Error('Unauthorized access');
       }
     }
 
-    if (allowedFields.length === 0) {
+    const allowedFields = requestingUserRole === "tenant_admin"
+      ? ['fullName', 'role', 'isActive']
+      : ['fullName'];
+    const filteredData = {};
+    allowedFields.forEach(field => {
+      if (updateData[field] !== undefined) {
+        filteredData[field] = updateData[field];
+      }
+    });
+
+    if (Object.keys(filteredData).length === 0) {
       throw new Error('No valid fields to update');
     }
 
-    allowedFields.push(`updated_at = $${paramCounter++}`);
-    values.push(new Date());
+    const fieldsMapping = {
+      fullName: 'full_name',
+      role: 'role',
+      isActive: 'is_active'
+    };
+    const fields = Object.keys(filteredData).map(field => fieldsMapping[field]);
+    const values = Object.values(filteredData);
 
-    values.push(userId);
-
+    const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
     const query = `
       UPDATE users 
-      SET ${allowedFields.join(', ')}
-      WHERE id = $${paramCounter}
-      RETURNING id, email, full_name, role, is_active, updated_at
+      SET ${setClause}, updated_at = NOW()
+      WHERE id = $${fields.length + 1}
+      RETURNING *
     `;
 
-    const result = await pool.query(query, values);
+    const result = await pool.query(query, [...values, userId]);
 
     if (result.rows.length === 0) {
+
       throw new Error('User not found');
     }
 
+    const updatedUser = result.rows[0];
     logger.info('User updated', { userId });
 
     // Log action in audit_logs
@@ -209,13 +259,16 @@ const updateUser = async (userId, updateData, requestingUserId, requestingUserRo
       // Don't fail the request if audit logging fails
     } finally {
       client.release();
+      return {
+        success: true,
+        message: 'User updated successfully',
+        data: {
+          id: updatedUser.id,
+          ...filteredData,
+          updatedAt: updatedUser.updated_at
+        }
+      };
     }
-
-    return {
-      success: true,
-      message: 'User updated successfully',
-      data: result.rows[0],
-    };
   } catch (error) {
     logger.error('Update user failed', { userId, error: error.message });
     throw error;
@@ -233,6 +286,15 @@ const getUserTenantId = async (userId) => {
  */
 const deleteUser = async (userId, requestingUserId, requestingUserTenantId) => {
   const client = await pool.connect();
+
+  const requestingUserDetails = await client.query(
+    'SELECT tenant_id, role from users where id = $1',
+    [requestingUserId]
+  );
+
+  if (requestingUserDetails.rows[0].role !== 'tenant_admin' && userId !== requestingUserId) {
+    throw new Error('Unauthorized access');
+  }
 
   try {
     await client.query('BEGIN');

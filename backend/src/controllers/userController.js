@@ -9,11 +9,17 @@ const addUserToTenant = async (req, res, next) => {
     );
     res.status(201).json(result);
   } catch (error) {
-    if (error.message === 'Subscription limit reached') {
+
+    console.log(error.message);
+
+    if (error.message === 'Subscription limit reached' || error.message === "Unauthorized access") {
       return res.status(403).json({ success: false, message: error.message });
     }
     if (error.message === 'Email already exists in this tenant') {
       return res.status(409).json({ success: false, message: error.message });
+    }
+    if (error.message === "Tenant not found") {
+      return res.status(400).json({ success: false, message: error.message });
     }
     next(error);
   }
@@ -21,8 +27,11 @@ const addUserToTenant = async (req, res, next) => {
 
 const listTenantUsers = async (req, res, next) => {
   try {
+    if (req.user.role === 'super_admin' || req.user.tenantId !== req.params.tenantId) {
+      return res.status(403).json({ success: false, message: 'Forbidden: You do not have permission' });
+    }
     const result = await userService.listTenantUsers(req.params.tenantId, req.query);
-    res.status(200).json(result);
+    return res.status(200).json(result);
   } catch (error) {
     next(error);
   }
@@ -34,11 +43,15 @@ const updateUser = async (req, res, next) => {
       req.params.userId,
       req.body,
       req.user.id,
-      req.user.role
+      req.user.role,
+      req.user.tenantId
     );
     console.log('updateUser controller - result:', req.params.userId, result);
     res.status(200).json(result);
   } catch (error) {
+    if (error.message === 'No valid fields to update') {
+      return res.status(400).json({ success: false, message: error.message });
+    }
     if (error.message === 'User not found') {
       return res.status(404).json({ success: false, message: error.message });
     }
@@ -58,7 +71,7 @@ const deleteUser = async (req, res, next) => {
     );
     res.status(200).json(result);
   } catch (error) {
-    if (error.message === 'Cannot delete self') {
+    if (error.message === 'Cannot delete self' || error.message === 'Unauthorized access') {
       return res.status(403).json({ success: false, message: error.message });
     }
     if (error.message === 'User not found') {
@@ -79,6 +92,7 @@ const getUserTasks = async (req, res) => {
 
     res.status(200).json({
       success: true,
+      message: 'User tasks retrieved successfully',
       data: {
         tasks
       }

@@ -1,4 +1,8 @@
+const pg = require('pg')
+
 require('dotenv').config();
+
+pg.types.setTypeParser(1082, (val) => val);
 
 module.exports = {
   host: process.env.DB_HOST || 'localhost',

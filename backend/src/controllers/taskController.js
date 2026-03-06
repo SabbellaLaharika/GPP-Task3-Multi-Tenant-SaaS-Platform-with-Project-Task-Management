@@ -1,3 +1,4 @@
+const e = require('express');
 const taskService = require('../services/taskService');
 
 const createTask = async (req, res, next) => {
@@ -5,13 +6,15 @@ const createTask = async (req, res, next) => {
     const result = await taskService.createTask(
       req.params.projectId,
       req.body,
-      req.tenantId,
       req.user.id // audit
     );
     res.status(201).json(result);
   } catch (error) {
-    if (error.message.includes("doesn't belong")) {
+    if (error.message.includes("Project")) {
       return res.status(403).json({ success: false, message: error.message });
+    }
+    if (error.message.includes("assignedTo") || error.message.includes("Due date")) {
+      return res.status(400).json({ success: false, message: error.message });
     }
     next(error);
   }
@@ -27,6 +30,9 @@ const listProjectTasks = async (req, res, next) => {
     );
     res.status(200).json(result);
   } catch (error) {
+    if (error.message.includes("invalid")) {
+      res.status(404).json({ success: false, message: error.message });
+    }
     next(error);
   }
 };
@@ -44,6 +50,9 @@ const updateTaskStatus = async (req, res, next) => {
     if (error.message.includes("doesn't belong")) {
       return res.status(403).json({ success: false, message: error.message });
     }
+    if (error.message === 'Task not found') {
+      return res.status(404).json({ success: false, message: error.message });
+    }
     next(error);
   }
 };
@@ -58,6 +67,12 @@ const updateTask = async (req, res, next) => {
     );
     res.status(200).json(result);
   } catch (error) {
+    if (error.message.includes("doesn't belong")) {
+      return res.status(403).json({ success: false, message: error.message });
+    }
+    if (error.message.includes("assignedTo") || error.message.includes("Due date") || error.message.includes("No valid fields")) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
     if (error.message === 'Task not found') {
       return res.status(404).json({ success: false, message: error.message });
     }
@@ -78,7 +93,12 @@ const deleteTask = async (req, res) => {
       message: 'Task deleted successfully'
     });
   } catch (error) {
-    console.error('Delete task error:', error);
+    if (error.message.includes("doesn't belong")) {
+      return res.status(403).json({ success: false, message: error.message });
+    }
+    if (error.message === 'Task not found') {
+      return res.status(404).json({ success: false, message: error.message });
+    }
     res.status(500).json({
       success: false,
       message: 'Failed to delete task',

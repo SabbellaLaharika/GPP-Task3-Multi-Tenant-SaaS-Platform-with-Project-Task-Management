@@ -20,11 +20,11 @@ const Users = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
-  const [newUser, setNewUser] = useState({ 
-    email: '', 
-    password: '', 
-    fullName: '', 
-    role: 'user' 
+  const [newUser, setNewUser] = useState({
+    email: '',
+    password: '',
+    fullName: '',
+    role: 'user'
   });
   const [formData, setFormData] = useState({
     fullName: '',
@@ -36,7 +36,7 @@ const Users = () => {
 
   useEffect(() => {
     loadUsers();
-}, [user,id]);
+  }, [user, id]);
 
   const loadUsers = async () => {
     try {
@@ -137,7 +137,7 @@ const Users = () => {
             {users.map((u) => (
               <tr key={u.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="font-medium text-gray-900">{u.full_name}</div>
+                  <div className="font-medium text-gray-900">{u.fullName}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{u.email}</td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -146,13 +146,12 @@ const Users = () => {
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    u.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {u.is_active ? 'Active' : 'Inactive'}
+                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${u.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                    }`}>
+                    {u.isActive ? 'Active' : 'Inactive'}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{formatDate(u.created_at)}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{formatDate(u.createdAt)}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-right">
                   {/* EDIT BUTTON */}
                   <button
@@ -178,9 +177,9 @@ const Users = () => {
       </div>
 
       {/* Create Modal */}
-      <Modal 
-        isOpen={showCreateModal} 
-        onClose={() => setShowCreateModal(false)} 
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
         title="Add New User"
       >
         <form onSubmit={handleCreate} className="space-y-4">
@@ -219,10 +218,10 @@ const Users = () => {
             <Button type="submit" variant="primary" className="flex-1" loading={creating}>
               Add User
             </Button>
-            <Button 
-              type="button" 
-              variant="secondary" 
-              className="flex-1" 
+            <Button
+              type="button"
+              variant="secondary"
+              className="flex-1"
               onClick={() => setShowCreateModal(false)}
             >
               Cancel
@@ -232,9 +231,9 @@ const Users = () => {
       </Modal>
 
       {/* EDIT MODAL */}
-      <Modal 
-        isOpen={showEditModal} 
-        onClose={() => setShowEditModal(false)} 
+      <Modal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
         title="Edit User"
       >
         <form onSubmit={handleUpdateUser} className="space-y-4">
@@ -246,7 +245,7 @@ const Users = () => {
             disabled
             className="bg-gray-100"
           />
-          
+
           {/* Full Name */}
           <Input
             label="Full Name"
@@ -254,7 +253,7 @@ const Users = () => {
             onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
             required
           />
-          
+
           {/* Role */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
@@ -267,7 +266,7 @@ const Users = () => {
               <option value="tenant_admin">Tenant Admin</option>
             </select>
           </div>
-          
+
           {/* Active Status */}
           <div>
             <label className="flex items-center gap-2 cursor-pointer">
@@ -283,16 +282,16 @@ const Users = () => {
               Inactive users cannot log in
             </p>
           </div>
-          
+
           {/* Buttons */}
           <div className="flex gap-3">
             <Button type="submit" variant="primary" className="flex-1" loading={updating}>
               Update User
             </Button>
-            <Button 
-              type="button" 
-              variant="secondary" 
-              className="flex-1" 
+            <Button
+              type="button"
+              variant="secondary"
+              className="flex-1"
               onClick={() => setShowEditModal(false)}
             >
               Cancel

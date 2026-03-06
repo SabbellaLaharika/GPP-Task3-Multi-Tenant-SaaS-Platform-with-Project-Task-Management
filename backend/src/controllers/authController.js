@@ -36,6 +36,9 @@ const getCurrentUser = async (req, res, next) => {
     const result = await authService.getCurrentUser(req.user.id);
     res.status(200).json(result);
   } catch (error) {
+    if (error.message === 'User not found') {
+      return res.status(404).json({ success: false, message: error.message });
+    }
     next(error);
   }
 };

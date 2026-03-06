@@ -106,18 +106,14 @@ Content-Type: application/json
   "success": true,
   "message": "Tenant registered successfully",
   "data": {
-    "tenant": {
-      "id": "...",
-      "name": "Test Company",
-      "subdomain": "testco"
-    },
-    "adminuser": {
-      "id": "...",
-      "email": "admin@testco.com",
-      "fullName" : "Test Admin",
+    "tenantId": "uuid",
+    "subdomain": "value",
+    "adminUser": {
+      "id": "uuid",
+      "email": "value",
+      "fullName": "value",
       "role": "tenant_admin"
-    },
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    }
   }
 }
 ```
@@ -128,7 +124,7 @@ Content-Type: application/json
 if (pm.response.code === 201) {
     var response = pm.response.json();
     pm.environment.set("token", response.data.token);
-    pm.environment.set("tenant_id", response.data.user.tenantId);
+    pm.environment.set("tenantId", response.data.user.tenantId);
     console.log("Token saved:", response.data.token);
 }
 ```
@@ -171,13 +167,14 @@ Content-Type: application/json
   "message": "Login successful",
   "data": {
     "user": {
-      "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+      "id": "bbbbbbbb-bbbb-bbbb",
       "email": "admin@demo.com",
       "fullName": "Demo Admin",
       "role": "tenant_admin",
-      "tenantId": "22222222-2222-2222-2222-222222222222"
+      "tenantId": "22222222-2222-2222"
     },
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expiresIn": "86400"
   }
 }
 ```
@@ -188,7 +185,7 @@ Content-Type: application/json
 if (pm.response.code === 200) {
     var response = pm.response.json();
     pm.environment.set("token", response.data.token);
-    pm.environment.set("tenant_id", response.data.user.tenantId);
+    pm.environment.set("tenantId", response.data.user.tenantId);
     console.log("✅ Token saved successfully");
     console.log("Token:", response.data.token);
 }
@@ -243,14 +240,21 @@ Authorization: Bearer {{token}}
 ```json
 {
   "success": true,
+  "message": "User details fetched successfully",
   "data": {
-    "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+    "id": "bbbbbbbb-bbbb-bbbb",
     "email": "admin@demo.com",
     "fullName": "Demo Admin",
     "role": "tenant_admin",
-    "tenantId": "22222222-2222-2222-2222-222222222222",
-    "tenantName": "Demo Company",
-    "isActive": true
+    "isActive": true,
+    "tenant": {
+      "id": "22222222-2222-2222",
+      "name": "Demo Company",
+      "subdomain": "demo",
+      "subscriptionPlan": "free",
+      "maxUsers": 5,
+      "maxProjects": 3
+    }
   }
 }
 ```
@@ -310,17 +314,21 @@ Authorization: Bearer {{token}}
 ```json
 {
   "success": true,
+  "message": "Tenant details retrieved successfully",
   "data": {
-    "id": "22222222-2222-2222-2222-222222222222",
+    "id": "22222222",
     "name": "Demo Company",
     "subdomain": "demo",
     "status": "active",
-    "subscription_plan": "professional",
-    "max_users": 50,
-    "max_projects": 100,
-    "total_users": 3,
-    "total_projects": 2,
-    "created_at": "2024-12-26T10:00:00.000Z"
+    "subscriptionPlan": "pro",
+    "maxUsers": 15,
+    "maxProjects": 100,
+    "createdAt": "2024-12-26T10:00:00.000Z",
+    "stats": {
+      "totalUsers": 5,
+      "totalProjects": 3,
+      "totalTasks": 15
+    }
   }
 }
 ```
@@ -348,7 +356,7 @@ Content-Type: application/json
 **Body (raw JSON):**
 ```json
 {
-  "name": "Demo Company - Updated via Postman"
+  "name": "Updated Project via Swagger"
 }
 ```
 
@@ -360,9 +368,9 @@ Content-Type: application/json
   "success": true,
   "message": "Tenant updated successfully",
   "data": {
-    "id": "22222222-2222-2222-2222-222222222222",
-    "name": "Demo Company - Updated via Postman",
-    "subdomain": "demo"
+    "id": "2222",
+    "name": "Updated Project via Swagger",
+    "updatedAt": "2024-12-26T10:00:00.000Z"
   }
 }
 ```
@@ -399,28 +407,16 @@ Authorization: Bearer {{token}}
   "data": {
     "tenants": [
       {
-        "id": "...",
+        "id": "1111",
         "name": "Demo Company",
         "subdomain": "demo",
         "status": "active",
-        "subscription_plan": "professional",
-        "total_users": 3,
-        "total_projects": 2
-      },
-      {
-        "id": "...",
-        "name": "System",
-        "subdomain": "system",
-        "status": "active",
-        "subscription_plan": "enterprise",
-        "total_users": 1,
-        "total_projects": 0
+        "subscriptionPlan": "professional",
+        "totalUsers": 3,
+        "totalProjects": 2,
+        "createdAt": "2024-12-26T10:00:00.000Z"
       }
-    ],
-    "total": 2,
-    "page": 1,
-    "limit": 10,
-    "totalPages": 1
+    ]
   }
 }
 ```
@@ -452,7 +448,7 @@ Content-Type: application/json
 {
   "email": "newuser@demo.com",
   "password": "NewUser@123",
-  "fullName": "New User from Postman",
+  "fullName": "New User from Swagger",
   "role": "user"
 }
 ```
@@ -465,12 +461,13 @@ Content-Type: application/json
   "success": true,
   "message": "User created successfully",
   "data": {
-    "id": "...",
+    "id": "user-id-uuid",
     "email": "newuser@demo.com",
-    "fullName": "New User from Postman",
+    "fullName": "New User from Swagger",
     "role": "user",
+    "tenantId": "22222222-2222",
     "isActive": true,
-    "tenantId": "22222222-2222-2222-2222-222222222222"
+    "createdAt": "2026-03-04T00:00:00.000Z"
   }
 }
 ```
@@ -509,34 +506,24 @@ Authorization: Bearer {{token}}
 ```json
 {
   "success": true,
+  "message": "Users fetched successfully",
   "data": {
     "users": [
       {
-        "id": "...",
+        "id": "user-id-uuid",
         "email": "admin@demo.com",
         "fullName": "Demo Admin",
         "role": "tenant_admin",
         "isActive": true,
-        "created_at": "2024-12-26T10:00:00.000Z"
-      },
-      {
-        "id": "...",
-        "email": "user@demo.com",
-        "fullName": "Demo User",
-        "role": "user",
-        "isActive": true,
-        "created_at": "2024-12-26T10:00:00.000Z"
-      },
-      {
-        "id": "...",
-        "email": "newuser@demo.com",
-        "fullName": "New User from Postman",
-        "role": "user",
-        "isActive": true,
-        "created_at": "2024-12-27T08:00:00.000Z"
+        "createdAt": "2024-12-26T10:00:00.000Z"
       }
     ],
-    "total": 3
+    "total": 5,
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 1,
+      "limit": 50
+    }
   }
 }
 ```
@@ -578,10 +565,10 @@ Content-Type: application/json
   "success": true,
   "message": "User updated successfully",
   "data": {
-    "id": "...",
+    "id": "user-uuid",
     "fullName": "Updated User Name",
     "role": "tenant_admin",
-    "isActive": true
+    "updatedAt": "2024-12-26T10:00:00.000Z"
   }
 }
 ```
@@ -640,8 +627,8 @@ Content-Type: application/json
 **Body (raw JSON):**
 ```json
 {
-  "name": "Postman Test Project",
-  "description": "This project was created via Postman testing",
+  "name": "Swagger Test Project",
+  "description": "This project was created via Swagger testing",
   "status": "active"
 }
 ```
@@ -654,13 +641,13 @@ Content-Type: application/json
   "success": true,
   "message": "Project created successfully",
   "data": {
-    "id": "...",
-    "name": "Postman Test Project",
-    "description": "This project was created via Postman testing",
+    "id": "project-uuid",
+    "tenantId": "tenant-uuid",
+    "name": "Swagger Test Project",
+    "description": "This project was created via Swagger testing",
     "status": "active",
-    "created_by": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
-    "tenant_id": "22222222-2222-2222-2222-222222222222",
-    "created_at": "2024-12-27T08:00:00.000Z"
+    "createdBy": "creator-uuid",
+    "createdAt": "2024-12-27T08:00:00.000Z"
   }
 }
 ```
@@ -669,7 +656,7 @@ Content-Type: application/json
 ```javascript
 if (pm.response.code === 201) {
     var response = pm.response.json();
-    pm.environment.set("project_id", response.data.id);
+    pm.environment.set("projectId", response.data.id);
     console.log("✅ Project created, ID saved:", response.data.id);
 }
 ```
@@ -707,27 +694,25 @@ Authorization: Bearer {{token}}
   "data": {
     "projects": [
       {
-        "id": "...",
-        "name": "Postman Test Project",
-        "description": "This project was created via Postman testing",
+        "id": "project-uuid",
+        "name": "Swagger Test Project",
+        "description": "This project was created via Swagger testing",
         "status": "active",
-        "task_count": 0,
-        "created_by_name": "Demo Admin",
-        "created_at": "2024-12-27T08:00:00.000Z"
-      },
-      {
-        "id": "...",
-        "name": "Website Redesign",
-        "description": "Redesign company website",
-        "status": "active",
-        "task_count": 3,
-        "created_by_name": "Demo Admin",
-        "created_at": "2024-12-26T10:00:00.000Z"
+        "createdBy": {
+          "id": "creator-uuid",
+          "fullName": "Demo Admin"
+        },
+        "taskCount": 5,
+        "completedTaskCount": 2,
+        "createdAt": "2024-12-27T08:00:00.000Z"
       }
     ],
     "total": 2,
-    "page": 1,
-    "limit": 10
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 1,
+      "limit": 20
+    }
   }
 }
 ```
@@ -757,7 +742,7 @@ Content-Type: application/json
 {
   "name": "Updated Project Name",
   "description": "Updated description via Postman",
-  "status": "in_progress"
+  "status": "archived"
 }
 ```
 
@@ -769,10 +754,11 @@ Content-Type: application/json
   "success": true,
   "message": "Project updated successfully",
   "data": {
-    "id": "...",
+    "id": "project-uuid",
     "name": "Updated Project Name",
     "description": "Updated description via Postman",
-    "status": "in_progress"
+    "status": "archived",
+    "updatedAt": "2024-12-27T08:00:00.000Z"
   }
 }
 ```
@@ -833,8 +819,8 @@ Content-Type: application/json
 **Body (raw JSON):**
 ```json
 {
-  "title": "Test Task from Postman",
-  "description": "This is a test task created via Postman",
+  "title": "Test Task from Swagger",
+  "description": "This is a test task created via Swagger",
   "priority": "high",
   "assignedTo": null,
   "dueDate": "2025-01-15"
@@ -849,15 +835,16 @@ Content-Type: application/json
   "success": true,
   "message": "Task created successfully",
   "data": {
-    "id": "...",
-    "project_id": "...",
-    "title": "Test Task from Postman",
-    "description": "This is a test task created via Postman",
+    "id": "task-uuid",
+    "projectId": "project-uuid",
+    "tenantId": "tenant-uuid",
+    "title": "Test Task from Swagger",
+    "description": "This is a test task created via Swagger",
     "status": "todo",
-    "priority": "high",
-    "assigned_to": null,
-    "due_date": "2025-01-15",
-    "created_at": "2024-12-27T08:00:00.000Z"
+    "priority": "medium",
+    "assignedTo": null,
+    "dueDate": "2025-01-15",
+    "createdAt": "2024-12-27T08:00:00.000Z"
   }
 }
 ```
@@ -904,18 +891,26 @@ Authorization: Bearer {{token}}
   "data": {
     "tasks": [
       {
-        "id": "...",
+        "id": "task-uuid",
         "title": "Test Task from Postman",
         "description": "This is a test task created via Postman",
-        "status": "todo",
+        "status": "in_progress",
         "priority": "high",
-        "assigned_to_name": null,
-        "created_by_name": "Demo Admin",
-        "due_date": "2025-01-15",
-        "created_at": "2024-12-27T08:00:00.000Z"
+        "assignedTo": {
+          "id": "assigned user uuid",
+          "fullName": "Demo user 1",
+          "email": "user1@demo.com"
+        },
+        "dueDate": "2025-01-15",
+        "createdAt": "2024-12-27T08:00:00.000Z"
       }
     ],
-    "total": 1
+    "total": 5,
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 1,
+      "limit": 50
+    }
   }
 }
 ```
@@ -955,8 +950,9 @@ Content-Type: application/json
   "success": true,
   "message": "Task status updated successfully",
   "data": {
-    "id": "...",
-    "status": "in_progress"
+    "id": "task-uuid",
+    "status": "in_progress",
+    "updatedAt": "2024-12-27T08:00:00.000Z"
   }
 }
 ```
@@ -1005,11 +1001,22 @@ Content-Type: application/json
   "success": true,
   "message": "Task updated successfully",
   "data": {
-    "id": "...",
-    "title": "Updated Task Title",
-    "description": "Updated description",
-    "priority": "low",
-    "due_date": "2025-01-20"
+    "tasks": [
+      {
+        "id": "task-uuid",
+        "title": "Test Task from Postman",
+        "description": "This is a test task created via Postman",
+        "status": "in_progress",
+        "priority": "high",
+        "assignedTo": {
+          "id": "assigned user uuid",
+          "fullName": "Demo user 1",
+          "email": "user1@demo.com"
+        },
+        "dueDate": "2025-01-15",
+        "updatedAt": "2024-12-27T08:00:00.000Z"
+      }
+    ]
   }
 }
 ```

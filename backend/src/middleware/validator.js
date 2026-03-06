@@ -15,7 +15,7 @@ const validate = (schema) => {
 
       // Check if required field is missing
       if (rules.required && (value === undefined || value === null || value === '')) {
-        errors.push(`${field} is required`);
+        errors.push({ field, message: `${field} is required` });
         continue;
       }
 
@@ -28,33 +28,33 @@ const validate = (schema) => {
       if (rules.type) {
         const actualType = Array.isArray(value) ? 'array' : typeof value;
         if (actualType !== rules.type) {
-          errors.push(`${field} must be of type ${rules.type}`);
+          errors.push({ field, message: `${field} must be of type ${rules.type}` });
         }
       }
 
       // String validations
       if (rules.type === 'string' && typeof value === 'string') {
         if (rules.minLength && value.length < rules.minLength) {
-          errors.push(`${field} must be at least ${rules.minLength} characters`);
+          errors.push({ field, message: `${field} must be at least ${rules.minLength} characters` });
         }
         if (rules.maxLength && value.length > rules.maxLength) {
-          errors.push(`${field} must not exceed ${rules.maxLength} characters`);
+          errors.push({ field, message: `${field} must not exceed ${rules.maxLength} characters` });
         }
         if (rules.pattern && !rules.pattern.test(value)) {
-          errors.push(`${field} format is invalid`);
+          errors.push({ field, message: `${field} format is invalid` });
         }
         if (rules.enum && !rules.enum.includes(value)) {
-          errors.push(`${field} must be one of: ${rules.enum.join(', ')}`);
+          errors.push({ field, message: `${field} must be one of: ${rules.enum.join(', ')}` });
         }
       }
 
       // Number validations
       if (rules.type === 'number' && typeof value === 'number') {
         if (rules.min !== undefined && value < rules.min) {
-          errors.push(`${field} must be at least ${rules.min}`);
+          errors.push({ field, message: `${field} must be at least ${rules.min}` });
         }
         if (rules.max !== undefined && value > rules.max) {
-          errors.push(`${field} must not exceed ${rules.max}`);
+          errors.push({ field, message: `${field} must not exceed ${rules.max}` });
         }
       }
 
@@ -62,7 +62,7 @@ const validate = (schema) => {
       if (rules.email && typeof value === 'string') {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(value)) {
-          errors.push(`${field} must be a valid email address`);
+          errors.push({ field, message: `${field} must be a valid email address` });
         }
       }
 
@@ -70,7 +70,7 @@ const validate = (schema) => {
       if (rules.uuid && typeof value === 'string') {
         const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         if (!uuidRegex.test(value)) {
-          errors.push(`${field} must be a valid UUID`);
+          errors.push({ field, message: `${field} must be a valid UUID` });
         }
       }
     }

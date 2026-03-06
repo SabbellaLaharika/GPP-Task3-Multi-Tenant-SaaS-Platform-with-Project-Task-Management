@@ -6,16 +6,16 @@ const pool = require('../db/pool');
 router.get('/health', async (req, res) => {
   try {
     await pool.query('SELECT NOW()');
-    res.status(200).json({ 
-      status: 'ok', 
+    res.status(200).json({
+      status: 'ok',
       database: 'connected',
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    res.status(503).json({ 
-      status: 'error', 
+    res.status(503).json({
+      status: 'error',
       database: 'disconnected',
-      error: error.message 
+      error: error.message
     });
   }
 });

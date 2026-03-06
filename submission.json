@@ -83,6 +83,11 @@
       }
     ]
   },
-  "backend_url": "http://localhost:5000",
-  "frontend_url": "http://localhost:3000"
+  "frontend_url": "http://localhost:3000",
+  "backend_url": "http://localhost:5000/api",
+  "backend_documentaion_urls": {
+    "swagger": "http://localhost:5000/api/docs",
+    "health": "http://localhost:5000/health",
+    "markdown": "https://github.com/SabbellaLaharika/GPP-Task3-Multi-Tenant-SaaS-Platform-with-Project-Task-Management/blob/main/docs/API.md"
+  }
 }

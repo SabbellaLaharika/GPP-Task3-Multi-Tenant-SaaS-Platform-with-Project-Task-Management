@@ -12,9 +12,6 @@ const logger = require('../utils/logger');
 const getTenantDetails = async (tenantId, requestingUserTenantId, requestingUserRole) => {
   try {
     // Enforce tenant isolation
-    if (requestingUserRole !== 'super_admin' && requestingUserTenantId !== tenantId) {
-      throw new Error('Unauthorized access');
-    }
     const tenantResult = await pool.query(
       `SELECT id, name, subdomain, status, subscription_plan, 
               max_users, max_projects, created_at, updated_at
@@ -25,6 +22,10 @@ const getTenantDetails = async (tenantId, requestingUserTenantId, requestingUser
 
     if (tenantResult.rows.length === 0) {
       throw new Error('Tenant not found');
+    }
+
+    if (requestingUserRole !== 'super_admin' && requestingUserTenantId !== tenantId) {
+      throw new Error('Unauthorized access');
     }
 
     const tenant = tenantResult.rows[0];
@@ -45,6 +46,7 @@ const getTenantDetails = async (tenantId, requestingUserTenantId, requestingUser
 
     return {
       success: true,
+      message: 'Tenant details retrieved successfully',
       data: {
         id: tenant.id,
         name: tenant.name,
@@ -70,14 +72,46 @@ const getTenantDetails = async (tenantId, requestingUserTenantId, requestingUser
 /**
  * Update tenant
  */
-const updateTenant = async (tenantId, updateData, requestingUserId) => {
-  // Build dynamic UPDATE query
-  const fields = Object.keys(updateData);
-  const values = Object.values(updateData);
+const updateTenant = async (tenantId, updateData, userRole, requestingUserId) => {
+  // Super admin can update everything
+  // Tenant admin can only update name
+  // Check for restricted fields for non-super-admins
+  if (userRole !== 'super_admin') {
+    const restrictedFields = ['subscriptionPlan', 'maxUsers', 'maxProjects', 'status'];
 
-  if (fields.length === 0) {
-    throw new Error('No fields to update');
+    const attemptedRestrictedUpdates = restrictedFields.filter(field => updateData[field] !== undefined);
+
+    if (attemptedRestrictedUpdates.length > 0) {
+      throw new Error(`You are not authorized to update: ${attemptedRestrictedUpdates.join(', ')}`);
+    }
   }
+
+  const allowedFields = userRole === 'super_admin'
+    ? ['name', "subscriptionPlan", 'maxUsers', 'maxProjects', 'status']
+    : ['name'];
+
+  const filteredData = {};
+  allowedFields.forEach(field => {
+    if (updateData[field] !== undefined) {
+      filteredData[field] = updateData[field];
+    }
+  });
+
+  if (Object.keys(filteredData).length === 0) {
+    throw new Error('No valid fields to update');
+  }
+
+  const fieldsMapping = {
+    name: 'name',
+    subscriptionPlan: 'subscription_plan',
+    maxUsers: 'max_users',
+    maxProjects: 'max_projects',
+    status: 'status'
+  };
+
+  // Build dynamic UPDATE query
+  const fields = Object.keys(updateData).map(field => fieldsMapping[field]);
+  const values = Object.values(updateData);
 
   // Build SET clause: field1 = $1, field2 = $2, ...
   const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
@@ -89,9 +123,6 @@ const updateTenant = async (tenantId, updateData, requestingUserId) => {
     RETURNING *
   `;
 
-  console.log('updateTenant service - query:', query);
-  console.log('updateTenant service - values:', [...values, tenantId]);
-
   try {
     const result = await pool.query(query, [...values, tenantId]);
 
@@ -100,7 +131,11 @@ const updateTenant = async (tenantId, updateData, requestingUserId) => {
     }
 
     const updatedTenant = result.rows[0];
-    console.log('updateTenant service - updated tenant:', updatedTenant);
+
+    if (filteredData.hasOwnProperty('subscriptionPlan')) {
+      filteredData['maxUsers'] = updatedTenant.max_users;
+      filteredData['maxProjects'] = updatedTenant.max_projects;
+    }
 
     // Audit Logging
     try {
@@ -114,7 +149,7 @@ const updateTenant = async (tenantId, updateData, requestingUserId) => {
       );
 
       // Log subscription change specifically if it happened
-      if (updateData.subscription_plan) {
+      if (updateData.subscriptionPlan) {
         await pool.query(
           `INSERT INTO audit_logs (id, tenant_id, user_id, action, entity_type, entity_id)
            VALUES ($1, $2, $3, $4, $5, $6)`,
@@ -124,8 +159,15 @@ const updateTenant = async (tenantId, updateData, requestingUserId) => {
     } catch (auditError) {
       logger.error('Failed to log tenant update', { error: auditError.message });
     }
-
-    return updatedTenant;
+    return {
+      success: true,
+      message: 'tenant updated successfully',
+      data: {
+        id: tenantId,
+        ...filteredData,
+        updatedAt: updatedTenant.updated_at,
+      }
+    };
   } catch (error) {
     console.error('updateTenant service error:', error);
     throw new Error(`Database error: ${error.message}`);
@@ -188,11 +230,14 @@ const listAllTenants = async (filters = {}) => {
           [tenant.id]
         );
         return {
-          ...tenant,
-          stats: {
-            totalUsers: parseInt(statsResult.rows[0].total_users),
-            totalProjects: parseInt(statsResult.rows[0].total_projects),
-          },
+          id: tenant.id,
+          name: tenant.name,
+          subdomain: tenant.subdomain,
+          status: tenant.status,
+          subscriptionPlan: tenant.subscription_plan,
+          totalUsers: parseInt(statsResult.rows[0].total_users),
+          totalProjects: parseInt(statsResult.rows[0].total_projects),
+          createdAt: tenant.created_at
         };
       })
     );

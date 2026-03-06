@@ -48,8 +48,23 @@ const createProject = async (projectData, userId, tenantId) => {
       logger.error('Failed to create audit log', { error: auditError.message });
     }
 
-    return { success: true, data: result.rows[0] };
-  } catch (error) {
+    const createdProject = result.rows[0];
+    const data = {
+      id: createdProject.id,
+      tenantId: createdProject.tenant_id,
+      name: createdProject.name,
+      description: createdProject.description,
+      status: createdProject.status,
+      createdBy: createdProject.created_by,
+      createdAt: createdProject.created_at
+    }
+    return {
+      success: true,
+      message: 'Project created successfully',
+      data: data
+    };
+  }
+  catch (error) {
     await client.query('ROLLBACK');
     logger.error('Create project failed', { error: error.message });
     throw error;
@@ -94,16 +109,36 @@ const listProjects = async (tenantId, filters = {}) => {
       [tenantId]
     );
 
+    const projectsWithStats = await Promise.all(
+      result.rows.map(async (project) => {
+        return {
+          id: project.id,
+          tenantId: project.tenant_id,
+          name: project.name,
+          description: project.description,
+          status: project.status,
+          createdBy: {
+            id: project.created_by,
+            name: project.created_by_name
+          },
+          taskCount: parseInt(project.task_count),
+          completedTaskCount: parseInt(project.completed_task_count),
+          createdAt: project.created_at
+        }
+      })
+    );
+    logger.info('Projects list retrieved', { count: result.rows.length });
     return {
       success: true,
+      message: 'Projects retrieved successfully',
       data: {
-        projects: result.rows,
+        projects: projectsWithStats,
         total: parseInt(countResult.rows[0].count),
         pagination: {
           currentPage: page,
           totalPages: Math.ceil(parseInt(countResult.rows[0].count) / limit),
-          limit,
-        },
+          limit: limit,
+        }
       },
     };
   } catch (error) {
@@ -135,40 +170,29 @@ const updateProject = async (projectId, updateData, userId, tenantId, userRole) 
     }
     client.release();
 
-    const fields = [];
-    const values = [];
-    let counter = 1;
+    const allowedFields = ['name', 'description', 'status'];
+    const filteredData = {};
+    allowedFields.forEach(field => {
+      if (updateData[field] !== undefined) {
+        filteredData[field] = updateData[field];
+      }
+    })
 
-    if (updateData.name) {
-      fields.push(`name = $${counter++}`);
-      values.push(updateData.name);
-    }
-    if (updateData.description !== undefined) {
-      fields.push(`description = $${counter++}`);
-      values.push(updateData.description);
-    }
-    if (updateData.status) {
-      fields.push(`status = $${counter++}`);
-      values.push(updateData.status);
+    if (Object.keys(filteredData).length === 0) {
+      throw new Error('No valid fields to update');
     }
 
-    if (fields.length === 0) {
-      throw new Error('No fields to update');
-    }
-
-    fields.push(`updated_at = $${counter++}`);
-    values.push(new Date());
-
-    values.push(projectId, tenantId);
-
+    const fields = Object.keys(filteredData);
+    const values = Object.values(filteredData);
+    const setClause = fields.map((field, index) => `${field} = $${index + 3}`).join(', ');
     const query = `
       UPDATE projects 
-      SET ${fields.join(', ')}
-      WHERE id = $${counter++} AND tenant_id = $${counter}
+      SET  ${setClause}, updated_at = NOW()
+      WHERE id = $${1} AND tenant_id = $${2}
       RETURNING *
     `;
 
-    const result = await pool.query(query, values);
+    const result = await pool.query(query, [projectId, tenantId, ...values]);
 
     if (result.rows.length === 0) {
       throw new Error('Project not found');
@@ -186,7 +210,15 @@ const updateProject = async (projectId, updateData, userId, tenantId, userRole) 
       logger.error('Failed to create audit log', { error: auditError.message });
     }
 
-    return { success: true, message: 'Project updated successfully', data: result.rows[0] };
+    return {
+      success: true,
+      message: 'Project updated successfully',
+      data: {
+        id: projectId,
+        ...filteredData,
+        updatedAt: result.rows[0].updated_at
+      }
+    };
   } catch (error) {
     logger.error('Update project failed', { error: error.message });
     throw error;

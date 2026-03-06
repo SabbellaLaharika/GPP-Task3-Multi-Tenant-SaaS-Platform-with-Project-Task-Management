@@ -3,9 +3,13 @@ const { pool } = require('../db/pool');
 const logger = require('../utils/logger');
 const { get } = require('../routes/superAdminRoutes');
 
-const createTask = async (projectId, taskData, tenantId, userId) => {
+const createTask = async (projectId, taskData, userId) => {
   try {
     // Verify project exists and belongs to tenant
+
+    const tenantIdQuery = 'SELECT tenant_id FROM projects WHERE id = $1';
+    const tenantIdResult = await pool.query(tenantIdQuery, [projectId]);
+    const tenantId = tenantIdResult.rows[0].tenant_id;
     const projectResult = await pool.query(
       'SELECT id FROM projects WHERE id = $1 AND tenant_id = $2',
       [projectId, tenantId]
@@ -27,6 +31,19 @@ const createTask = async (projectId, taskData, tenantId, userId) => {
       }
     }
 
+    if (taskData.dueDate) {
+      const inputDate = new Date(taskData.dueDate);
+      const today = new Date();
+
+      // Reset both to midnight for a fair comparison of just the day
+      inputDate.setHours(0, 0, 0, 0);
+      today.setHours(0, 0, 0, 0);
+
+      if (inputDate < today) {
+        throw new Error("Due date cannot be in the past");
+      }
+    }
+
     const taskId = uuidv4();
     const result = await pool.query(
       `INSERT INTO tasks (id, project_id, tenant_id, title, description, status, priority, assigned_to, due_date)
@@ -41,7 +58,7 @@ const createTask = async (projectId, taskData, tenantId, userId) => {
         'todo',
         taskData.priority || 'medium',
         taskData.assignedTo || null,
-        taskData.dueDate || null,
+        taskData.dueDate ? taskData.dueDate.split('T')[0] : null
       ]
     );
 
@@ -57,7 +74,23 @@ const createTask = async (projectId, taskData, tenantId, userId) => {
       logger.error('Failed to create audit log', { error: auditError.message });
     }
 
-    return { success: true, data: result.rows[0] };
+    const createdTask = result.rows[0];
+    return {
+      success: true,
+      message: "Task created successfully",
+      data: {
+        id: createdTask.id,
+        projectId: createdTask.project_id,
+        tenantId: createdTask.tenant_id,
+        title: createdTask.title,
+        description: createdTask.description,
+        status: createdTask.status,
+        priority: createdTask.priority,
+        assignedTo: createdTask.assigned_to,
+        dueDate: createdTask.due_date,
+        createdAt: createdTask.created_at
+      }
+    };
   } catch (error) {
     logger.error('Create task failed', { error: error.message });
     throw error;
@@ -65,151 +98,125 @@ const createTask = async (projectId, taskData, tenantId, userId) => {
 };
 
 const listProjectTasks = async (projectId, tenantId, userRole, filters = {}) => {
+
+
   try {
-    const { page = 1, limit = 50, status, assignedTo, priority, search } = filters;
+    let { page = 1, limit = 50, status, assignedTo, priority, search } = filters;
+
+    page = parseInt(page) || 1;
+    limit = Math.min(parseInt(limit) || 50, 100);
     const offset = (page - 1) * limit;
 
-    let query;
-    let params;
-    let countQuery;
-    let countParams;
+    const projectResult = await pool.query(
+      'SELECT id FROM projects WHERE id = $1',
+      [projectId]
+    );
 
-    // Super admin can see all tasks
-    if (userRole === 'super_admin') {
-      query = `
-        SELECT t.*, u.full_name as assigned_to_name
-        FROM tasks t
-        LEFT JOIN users u ON t.assigned_to = u.id
-        WHERE t.project_id = $1
-      `;
-      params = [projectId];
-      countQuery = 'SELECT COUNT(*) FROM tasks WHERE project_id = $1';
-      countParams = [projectId];
+    if (projectResult.rows.length == 0) {
+      throw new Error("Project not found or invalid project id provided");
+    }
+    // 1. Build dynamic filters
+    const conditions = ['t.project_id = $1'];
+    const params = [projectId];
 
-      let paramCounter = 2;
-
-      if (status) {
-        query += ` AND t.status = $${paramCounter}`;
-        countQuery += ` AND status = $${paramCounter}`;
-        params.push(status);
-        countParams.push(status);
-        paramCounter++;
-      }
-
-      if (assignedTo) {
-        query += ` AND t.assigned_to = $${paramCounter}`;
-        countQuery += ` AND assigned_to = $${paramCounter}`;
-        params.push(assignedTo);
-        countParams.push(assignedTo);
-        paramCounter++;
-      }
-
-      if (priority) {
-        query += ` AND t.priority = $${paramCounter}`;
-        countQuery += ` AND priority = $${paramCounter}`;
-        params.push(priority);
-        countParams.push(priority);
-        paramCounter++;
-      }
-
-      if (search) {
-        query += ` AND t.title ILIKE $${paramCounter}`;
-        countQuery += ` AND title ILIKE $${paramCounter}`;
-        params.push(`%${search}%`);
-        countParams.push(`%${search}%`);
-        paramCounter++;
-      }
-
-      query += ` ORDER BY 
-        CASE t.priority 
-          WHEN 'high' THEN 1 
-          WHEN 'medium' THEN 2 
-          WHEN 'low' THEN 3 
-        END,
-        t.due_date ASC
-        LIMIT $${paramCounter} OFFSET $${paramCounter + 1}`;
-      params.push(limit, offset);
-
-    } else {
-      // Regular tenant admin/user
-      query = `
-        SELECT t.*, u.full_name as assigned_to_name
-        FROM tasks t
-        LEFT JOIN users u ON t.assigned_to = u.id
-        WHERE t.project_id = $1 AND t.tenant_id = $2
-      `;
-      params = [projectId, tenantId];
-      countQuery = 'SELECT COUNT(*) FROM tasks WHERE project_id = $1 AND tenant_id = $2';
-      countParams = [projectId, tenantId];
-
-      let paramCounter = 3;
-
-      if (status) {
-        query += ` AND t.status = $${paramCounter}`;
-        countQuery += ` AND status = $${paramCounter}`;
-        params.push(status);
-        countParams.push(status);
-        paramCounter++;
-      }
-
-      if (assignedTo) {
-        query += ` AND t.assigned_to = $${paramCounter}`;
-        countQuery += ` AND assigned_to = $${paramCounter}`;
-        params.push(assignedTo);
-        countParams.push(assignedTo);
-        paramCounter++;
-      }
-
-      if (priority) {
-        query += ` AND t.priority = $${paramCounter}`;
-        countQuery += ` AND priority = $${paramCounter}`;
-        params.push(priority);
-        countParams.push(priority);
-        paramCounter++;
-      }
-
-      if (search) {
-        query += ` AND t.title ILIKE $${paramCounter}`;
-        countQuery += ` AND title ILIKE $${paramCounter}`;
-        params.push(`%${search}%`);
-        countParams.push(`%${search}%`);
-        paramCounter++;
-      }
-
-      query += ` ORDER BY 
-        CASE t.priority 
-          WHEN 'high' THEN 1 
-          WHEN 'medium' THEN 2 
-          WHEN 'low' THEN 3 
-        END,
-        t.due_date ASC
-        LIMIT $${paramCounter} OFFSET $${paramCounter + 1}`;
-      params.push(limit, offset);
+    // Security: Only super_admin bypasses tenant isolation
+    if (userRole !== 'super_admin') {
+      conditions.push('t.tenant_id = $2');
+      params.push(tenantId);
     }
 
-    const result = await pool.query(query, params);
-    const countResult = await pool.query(countQuery, countParams);
+    let paramIndex = params.length + 1;
 
+    if (status && status !== 'string' && status !== '') {
+      conditions.push(`t.status = $${paramIndex++}`);
+      params.push(status);
+    }
+
+    if (assignedTo) {
+      conditions.push(`t.assigned_to = $${paramIndex++}`);
+      params.push(assignedTo);
+    }
+
+    if (priority) {
+      conditions.push(`t.priority = $${paramIndex++}`);
+      params.push(priority);
+    }
+
+    if (search) {
+      conditions.push(`t.title ILIKE $${paramIndex++}`);
+      params.push(`%${search}%`);
+    }
+
+    const whereClause = conditions.join(' AND ');
+
+    // 2. Main query
+    const query = `
+      SELECT t.*, u.full_name as assigned_to_name, u.email as assigned_to_email
+      FROM tasks t
+      LEFT JOIN users u ON t.assigned_to = u.id
+      WHERE ${whereClause}
+      ORDER BY 
+        CASE t.priority 
+          WHEN 'high' THEN 1 
+          WHEN 'medium' THEN 2 
+          WHEN 'low' THEN 3 
+        END,
+        t.due_date ASC
+      LIMIT $${paramIndex++} OFFSET $${paramIndex}
+    `;
+    const result = await pool.query(query, [...params, limit, offset]);
+
+    // 3. Count query (re-uses the same whereClause and params)
+    const countQuery = `SELECT COUNT(*) FROM tasks t WHERE ${whereClause}`;
+    const countResult = await pool.query(countQuery, params);
+    const total = parseInt(countResult.rows[0].count);
+    const tasks = result.rows.map((task) => ({
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      status: task.status,
+      priority: task.priority,
+      assignedTo: {
+        id: task.assigned_to,
+        fullName: task.assigned_to_name,
+        email: task.assigned_to_email
+      },
+      dueDate: task.due_date,
+      createdAt: task.created_at
+    }))
     return {
       success: true,
+      message: 'Tasks list retrieved successfully',
       data: {
-        tasks: result.rows,
-        total: parseInt(countResult.rows[0].count),
+        tasks: tasks,
+        total,
         pagination: {
           currentPage: page,
-          totalPages: Math.ceil(parseInt(countResult.rows[0].count) / limit),
+          totalPages: Math.ceil(total / limit),
           limit,
         },
       },
     };
   } catch (error) {
-    logger.error('List tasks failed', { error: error.message });
+    logger.error('List tasks failed', { projectId, error: error.message });
     throw error;
   }
 };
 
 const updateTaskStatus = async (taskId, status, tenantId, userId) => {
   try {
+
+    const requirements = await pool.query(
+      `SELECT tenant_id FROM tasks WHERE id = $1`, [taskId]
+    )
+
+    const taskTenantId = requirements.rows[0].tenant_id;
+
+    if (tenantId !== taskTenantId) {
+      throw new Error("Task doesn't belongs to user's tenant");
+    }
+
+
     const result = await pool.query(
       `UPDATE tasks 
        SET status = $1, updated_at = $2
@@ -219,7 +226,7 @@ const updateTaskStatus = async (taskId, status, tenantId, userId) => {
     );
 
     if (result.rows.length === 0) {
-      throw new Error("Task doesn't belong to user's tenant");
+      throw new Error("Task not found");
     }
 
     logger.info('Task status updated', { taskId, status });
@@ -234,7 +241,15 @@ const updateTaskStatus = async (taskId, status, tenantId, userId) => {
       logger.error('Failed to create audit log', { error: auditError.message });
     }
 
-    return { success: true, data: result.rows[0] };
+    return {
+      success: true,
+      message: 'Task status updated successfully',
+      data: {
+        id: result.rows[0].id,
+        status: result.rows[0].status,
+        updatedAt: result.rows[0].updated_at
+      }
+    };
   } catch (error) {
     logger.error('Update task status failed', { error: error.message });
     throw error;
@@ -242,90 +257,108 @@ const updateTaskStatus = async (taskId, status, tenantId, userId) => {
 };
 
 const updateTask = async (taskId, updateData, tenantId, userId) => {
+  const client = await pool.connect();
   try {
-    const fields = [];
+    // 1. Initial Validation
+    const { rows: taskRows } = await client.query('SELECT tenant_id FROM tasks WHERE id = $1', [taskId]);
+    if (taskRows.length === 0) throw new Error('Task not found');
+    if (taskRows[0].tenant_id !== tenantId) throw new Error("Task doesn't belong to user's tenant");
+
+    if (updateData.dueDate && new Date(updateData.dueDate).setHours(0, 0, 0, 0) < new Date().setHours(0, 0, 0, 0)) {
+      throw new Error("Due date cannot be in the past");
+    }
+
+    // 2. Dynamic Query Building
+    const allowedFields = ['title', 'description', 'status', 'priority', 'assignedTo', 'dueDate'];
+    const updateFields = [];
     const values = [];
+    const filteredData = {};
     let counter = 1;
 
-    if (updateData.title) {
-      fields.push(`title = $${counter++}`);
-      values.push(updateData.title);
-    }
-    if (updateData.description !== undefined) {
-      fields.push(`description = $${counter++}`);
-      values.push(updateData.description);
-    }
-    if (updateData.status) {
-      fields.push(`status = $${counter++}`);
-      values.push(updateData.status);
-    }
-    if (updateData.priority) {
-      fields.push(`priority = $${counter++}`);
-      values.push(updateData.priority);
-    }
-    if (updateData.assignedTo !== undefined) {
-      if (updateData.assignedTo === null || updateData.assignedTo === '') {
-        fields.push(`assigned_to = NULL`);
-      } else {
-        const userCheck = await pool.query(
-          'SELECT id FROM users WHERE id = $1 AND tenant_id = $2',
-          [updateData.assignedTo, tenantId]
-        );
-        if (userCheck.rows.length === 0) {
-          throw new Error("assignedTo user doesn't belong to same tenant");
+    for (const key of allowedFields) {
+      if (updateData[key] !== undefined) {
+        const columnName = key === 'assignedTo' ? 'assigned_to' : key.replace(/[A-Z]/g, l => `_${l.toLowerCase()}`);
+        let value = (updateData[key] === '' || updateData[key] === null) ? null : updateData[key];
+
+        // Verify assignedTo user belongs to same tenant
+        if (key === 'assignedTo' && value) {
+          const { rows: userCheck } = await client.query('SELECT id FROM users WHERE id = $1 AND tenant_id = $2', [value, tenantId]);
+          if (userCheck.length === 0) throw new Error("assignedTo user doesn't belong to same tenant");
         }
-        fields.push(`assigned_to = $${counter++}`);
-        values.push(updateData.assignedTo);
+
+        updateFields.push(`${columnName} = $${counter++}`);
+        values.push(value);
+        filteredData[key] = value;
       }
     }
-    if (updateData.dueDate !== undefined) {
-      fields.push(`due_date = $${counter++}`);
-      values.push(updateData.dueDate);
-    }
 
-    if (fields.length === 0) {
-      throw new Error('No fields to update');
-    }
+    if (updateFields.length === 0) throw new Error('No valid fields to update');
 
-    fields.push(`updated_at = $${counter++}`);
+    updateFields.push(`updated_at = $${counter++}`);
     values.push(new Date());
-
+    const taskIdIdx = counter++;
+    const tenantIdIdx = counter;
     values.push(taskId, tenantId);
 
+    // 3. Update with CTE to get user details
     const query = `
-      UPDATE tasks 
-      SET ${fields.join(', ')}
-      WHERE id = $${counter++} AND tenant_id = $${counter}
-      RETURNING *
+      WITH updated AS (
+        UPDATE tasks 
+        SET ${updateFields.join(', ')} 
+        WHERE id = $${taskIdIdx} AND tenant_id = $${tenantIdIdx} 
+        RETURNING *
+      )
+      SELECT u.*, us.full_name, us.email 
+      FROM updated u
+      LEFT JOIN users us ON u.assigned_to = us.id
     `;
 
-    const result = await pool.query(query, values);
+    const { rows: resultRows } = await client.query(query, values);
+    if (resultRows.length === 0) throw new Error('Task not found');
+    const task = resultRows[0];
 
-    if (result.rows.length === 0) {
-      throw new Error('Task not found');
-    }
-
-    logger.info('Task updated', { taskId });
-
+    // 4. Audit Log (Silent fail)
     try {
-      await pool.query(
-        `INSERT INTO audit_logs (id, tenant_id, user_id, action, entity_type, entity_id)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
+      await client.query(
+        `INSERT INTO audit_logs (id, tenant_id, user_id, action, entity_type, entity_id) VALUES ($1, $2, $3, $4, $5, $6)`,
         [uuidv4(), tenantId, userId, 'UPDATE_TASK', 'task', taskId]
       );
-    } catch (auditError) {
-      logger.error('Failed to create audit log', { error: auditError.message });
+    } catch (e) { logger.error('Audit failed', { error: e.message }); }
+
+    // 5. Handle nested assignedTo object within filteredData
+    if (filteredData.hasOwnProperty('assignedTo')) {
+      filteredData.assignedTo = task.assigned_to ? {
+        id: task.assigned_to,
+        fullName: task.full_name,
+        email: task.email
+      } : null;
     }
 
-    return { success: true, message: 'Task updated successfully', data: result.rows[0] };
+    return {
+      success: true,
+      message: 'Task updated successfully',
+      data: {
+        id: task.id,
+        ...filteredData, // Contains only the fields from req.body
+        updatedAt: task.updated_at
+      }
+    };
   } catch (error) {
-    logger.error('Update task failed', { error: error.message });
+    logger.error('Update task failed', { taskId, error: error.message });
     throw error;
+  } finally {
+    client.release();
   }
 };
 
+
 const deleteTask = async (taskId, tenantId, userId) => {
   try {
+
+    const { rows: taskRows } = await pool.query('SELECT tenant_id FROM tasks WHERE id = $1', [taskId]);
+    if (taskRows.length === 0) throw new Error('Task not found');
+    if (taskRows[0].tenant_id !== tenantId) throw new Error("Task doesn't belong to user's tenant");
+
     const result = await pool.query(
       'DELETE FROM tasks WHERE id = $1 AND tenant_id = $2 RETURNING id',
       [taskId, tenantId]

@@ -36,6 +36,9 @@ const updateProject = async (req, res, next) => {
     );
     res.status(200).json(result);
   } catch (error) {
+    if (error.message === 'No valid fields to update') {
+      return res.status(400).json({ success: false, message: error.message });
+    }
     if (error.message === 'Project not found') {
       return res.status(404).json({ success: false, message: error.message });
     }
@@ -52,7 +55,8 @@ const deleteProject = async (req, res, next) => {
       req.params.projectId,
       req.tenantId,
       req.user.id, // Pass userId for audit logging
-      req.user.role
+      req.user.role,
+
     );
     res.status(200).json(result);
   } catch (error) {
@@ -66,52 +70,9 @@ const deleteProject = async (req, res, next) => {
   }
 };
 
-// const getProjects = async (req, res) => {
-//   try {
-//     const { status, search, sortBy, order } = req.query;
-//     const userRole = req.user.role;
-//     const tenantId = req.user.tenantId;
-
-//     let projects;
-
-//     // Super Admin gets ALL projects across ALL tenants
-//     if (userRole === 'super_admin') {
-//       projects = await projectService.getAllProjectsForSuperAdmin({
-//         status,
-//         search,
-//         sortBy,
-//         order
-//       });
-//     } else {
-//       // Regular users get only their tenant's projects
-//       projects = await projectService.getProjects(tenantId, {
-//         status,
-//         search,
-//         sortBy,
-//         order
-//       });
-//     }
-
-//     res.status(200).json({
-//       success: true,
-//       data: {
-//         projects
-//       }
-//     });
-//   } catch (error) {
-//     console.error('Get projects error:', error);
-//     res.status(500).json({
-//       success: false,
-//       message: 'Failed to fetch projects',
-//       error: error.message
-//     });
-//   }
-// };
-
 module.exports = {
   createProject,
   listProjects,
   updateProject,
   deleteProject,
-  //getProjects,
 };

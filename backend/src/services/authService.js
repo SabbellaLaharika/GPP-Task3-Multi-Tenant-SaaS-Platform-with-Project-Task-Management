@@ -70,14 +70,6 @@ const registerTenant = async (tenantData) => {
       logger.error('Failed to log tenant registration', { error: auditError.message });
     }
 
-    // Generate token
-    const token = generateToken({
-      userId: user.id,
-      email: user.email,
-      role: user.role,
-      tenantId: user.tenant_id,
-    });
-
     return {
       success: true,
       message: 'Tenant registered successfully',
@@ -90,7 +82,6 @@ const registerTenant = async (tenantData) => {
           fullName: user.full_name,
           role: user.role,
         },
-        token,
       },
     };
   } catch (error) {
@@ -183,6 +174,7 @@ const login = async (loginData) => {
 
     return {
       success: true,
+      message: "Login Successfully",
       data: {
         user: {
           id: user.id,
@@ -241,6 +233,7 @@ const getCurrentUser = async (userId) => {
 
     return {
       success: true,
+      message: 'User details fetched successfully',
       data: {
         id: user.id,
         email: user.email,

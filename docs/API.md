@@ -6,6 +6,8 @@ This document provides comprehensive documentation for all 19 API endpoints in t
 
 **Base URL:** `http://localhost:5000/api`
 
+**Swagger UI:** [View API Testing Swagger Details](http://localhost:5000/api/docs)
+
 **Postman Collection:** [View in Postman](https://www.postman.com/laharika-7870951/workspace/multi-tenant-saas-api/collection/46220444-88bb70b8-19a9-4ac4-b9a7-d573497e7655?action=share&creator=46220444&active-environment=46220444-1102035d-ed7f-4272-90d7-e4963984e6e7)
 
 ---
@@ -89,11 +91,11 @@ Register a new tenant organization with an admin user.
 
 ```json
 {
-  "tenantName": "Tech Company",
-  "subdomain": "techco",
-  "adminEmail": "admin@techco.com",
-  "adminPassword": "Admin@123",
-  "adminFullName": "John Doe"
+  "tenantName": "Test Company Alpha",
+  "subdomain": "testalpha",
+  "adminEmail": "admin@testalpha.com",
+  "adminPassword": "TestPass@123",
+  "adminFullName": "Alpha Admin"
 }
 ```
 
@@ -111,25 +113,14 @@ Register a new tenant organization with an admin user.
   "success": true,
   "message": "Tenant registered successfully",
   "data": {
-    "tenant": {
-      "id": "550e8400-e29b-41d4-a716-446655440000",
-      "name": "Tech Company",
-      "subdomain": "techco",
-      "status": "active",
-      "subscription_plan": "basic",
-      "max_users": 10,
-      "max_projects": 20,
-      "created_at": "2024-12-28T10:00:00.000Z"
-    },
-    "user": {
-      "id": "660f9511-f3ac-52e5-b827-557766551111",
-      "email": "admin@techco.com",
-      "full_name": "John Doe",
-      "role": "tenant_admin",
-      "is_active": true,
-      "tenant_id": "550e8400-e29b-41d4-a716-446655440000"
-    },
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2NjBmOTUxMS1mM2FjLTUyZTUtYjgyNy01NTc3NjY1NTExMTEiLCJyb2xlIjoidGVuYW50X2FkbWluIiwidGVuYW50SWQiOiI1NTBlODQwMC1lMjliLTQxZDQtYTcxNi00NDY2NTU0NDAwMDAiLCJpYXQiOjE3MDM3NjQ4MDAsImV4cCI6MTcwNDM2OTYwMH0.abc123xyz"
+    "tenantId": "uuid",
+    "subdomain": "value",
+    "adminUser": {
+      "id": "uuid",
+      "email": "value",
+      "fullName": "value",
+      "role": "tenant_admin"
+    }
   }
 }
 ```
@@ -203,16 +194,14 @@ Authenticate a user and receive a JWT token.
   "message": "Login successful",
   "data": {
     "user": {
-      "id": "770fa622-g4bd-63f6-c938-668877662222",
+      "id": "bbbbbbbb-bbbb-bbbb",
       "email": "admin@demo.com",
-      "full_name": "Demo Admin",
+      "fullName": "Demo Admin",
       "role": "tenant_admin",
-      "is_active": true,
-      "tenant_id": "440d7300-d18a-30c3-9605-335544330000",
-      "tenant_name": "Demo Company",
-      "tenant_subdomain": "demo"
+      "tenantId": "22222222-2222-2222"
     },
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI3NzBmYTYyMi1nNGJkLTYzZjYtYzkzOC02Njg4Nzc2NjIyMjIiLCJyb2xlIjoidGVuYW50X2FkbWluIiwidGVuYW50SWQiOiI0NDBkNzMwMC1kMThhLTMwYzMtOTYwNS0zMzU1NDQzMzAwMDAiLCJpYXQiOjE3MDM3NjQ4MDAsImV4cCI6MTcwNDM2OTYwMH0.def456uvw"
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expiresIn": "86400"
   }
 }
 ```
@@ -223,7 +212,7 @@ Authenticate a user and receive a JWT token.
 // 401 - Invalid Credentials
 {
   "success": false,
-  "message": "Invalid email or password"
+  "message": "Invalid credentials"
 }
 
 // 404 - Tenant Not Found
@@ -235,7 +224,7 @@ Authenticate a user and receive a JWT token.
 // 403 - Inactive User
 {
   "success": false,
-  "message": "User account is inactive"
+  "message": "Account suspended/inactive"
 }
 ```
 
@@ -272,16 +261,21 @@ Authorization: Bearer <your_jwt_token>
 ```json
 {
   "success": true,
+  "message": "User details fetched successfully",
   "data": {
-    "id": "770fa622-g4bd-63f6-c938-668877662222",
+    "id": "bbbbbbbb-bbbb-bbbb",
     "email": "admin@demo.com",
-    "full_name": "Demo Admin",
+    "fullName": "Demo Admin",
     "role": "tenant_admin",
-    "is_active": true,
-    "tenant_id": "440d7300-d18a-30c3-9605-335544330000",
-    "tenant_name": "Demo Company",
-    "tenant_subdomain": "demo",
-    "created_at": "2024-12-20T10:00:00.000Z"
+    "isActive": true,
+    "tenant": {
+      "id": "22222222-2222-2222",
+      "name": "Demo Company",
+      "subdomain": "demo",
+      "subscriptionPlan": "free",
+      "maxUsers": 5,
+      "maxProjects": 3
+    }
   }
 }
 ```
@@ -292,7 +286,7 @@ Authorization: Bearer <your_jwt_token>
 // 401 - Invalid/Expired Token
 {
   "success": false,
-  "message": "Invalid or expired token"
+  "message": "Unauthorized access"
 }
 
 // 404 - User Not Found
@@ -367,18 +361,21 @@ Get details of a specific tenant.
 ```json
 {
   "success": true,
+  "message": "Tenant details retrieved successfully",
   "data": {
-    "id": "440d7300-d18a-30c3-9605-335544330000",
+    "id": "22222222",
     "name": "Demo Company",
     "subdomain": "demo",
     "status": "active",
-    "subscription_plan": "professional",
-    "max_users": 50,
-    "max_projects": 100,
-    "current_users": 3,
-    "current_projects": 5,
-    "created_at": "2024-12-20T10:00:00.000Z",
-    "updated_at": "2024-12-26T15:30:00.000Z"
+    "subscriptionPlan": "pro",
+    "maxUsers": 15,
+    "maxProjects": 100,
+    "createdAt": "2024-12-26T10:00:00.000Z",
+    "stats": {
+      "totalUsers": 5,
+      "totalProjects": 3,
+      "totalTasks": 15
+    }
   }
 }
 ```
@@ -389,7 +386,7 @@ Get details of a specific tenant.
 // 403 - Forbidden
 {
   "success": false,
-  "message": "Access denied"
+  "message": "Unauthorized access"
 }
 
 // 404 - Not Found
@@ -427,7 +424,7 @@ Update tenant information.
 
 ```json
 {
-  "name": "Demo Company International"
+  "name": "Updated Project via Swagger"
 }
 ```
 
@@ -435,11 +432,7 @@ Update tenant information.
 
 ```json
 {
-  "name": "Demo Company International",
-  "status": "active",
-  "subscription_plan": "enterprise",
-  "max_users": 100,
-  "max_projects": 200
+  "name": "Updated Project via Swagger"
 }
 ```
 
@@ -457,14 +450,9 @@ Update tenant information.
   "success": true,
   "message": "Tenant updated successfully",
   "data": {
-    "id": "440d7300-d18a-30c3-9605-335544330000",
-    "name": "Demo Company International",
-    "subdomain": "demo",
-    "status": "active",
-    "subscription_plan": "enterprise",
-    "max_users": 100,
-    "max_projects": 200,
-    "updated_at": "2024-12-28T10:00:00.000Z"
+    "id": "2222",
+    "name": "Updated Project via Swagger",
+    "updatedAt": "2024-12-26T10:00:00.000Z"
   }
 }
 ```
@@ -475,7 +463,7 @@ Update tenant information.
 // 403 - Forbidden
 {
   "success": false,
-  "message": "You can only update your own tenant"
+  "message": "Unauthorized access"
 }
 
 // 404 - Not Found
@@ -529,36 +517,16 @@ GET /api/tenants?page=1&limit=10&status=active&search=demo
   "data": {
     "tenants": [
       {
-        "id": "440d7300-d18a-30c3-9605-335544330000",
+        "id": "1111",
         "name": "Demo Company",
         "subdomain": "demo",
         "status": "active",
-        "subscription_plan": "professional",
-        "max_users": 50,
-        "max_projects": 100,
-        "current_users": 3,
-        "current_projects": 5,
-        "created_at": "2024-12-20T10:00:00.000Z"
-      },
-      {
-        "id": "550e8400-e29b-41d4-a716-446655440000",
-        "name": "Tech Company",
-        "subdomain": "techco",
-        "status": "active",
-        "subscription_plan": "basic",
-        "max_users": 10,
-        "max_projects": 20,
-        "current_users": 1,
-        "current_projects": 0,
-        "created_at": "2024-12-28T10:00:00.000Z"
+        "subscriptionPlan": "professional",
+        "totalUsers": 3,
+        "totalProjects": 2,
+        "createdAt": "2024-12-26T10:00:00.000Z"
       }
-    ],
-    "pagination": {
-      "total": 25,
-      "page": 1,
-      "limit": 10,
-      "totalPages": 3
-    }
+    ]
   }
 }
 ```
@@ -569,7 +537,7 @@ GET /api/tenants?page=1&limit=10&status=active&search=demo
 // 403 - Forbidden
 {
   "success": false,
-  "message": "Access denied. Super admin role required"
+  "message": "Unauthorized access"
 }
 ```
 
@@ -604,8 +572,8 @@ Create a new user in a tenant organization.
 ```json
 {
   "email": "newuser@demo.com",
-  "password": "User@123",
-  "full_name": "New User",
+  "password": "NewUser@123",
+  "fullName": "New User from Swagger",
   "role": "user"
 }
 ```
@@ -623,13 +591,13 @@ Create a new user in a tenant organization.
   "success": true,
   "message": "User created successfully",
   "data": {
-    "id": "880gb733-h5ce-74g7-d049-779988773333",
+    "id": "user-id-uuid",
     "email": "newuser@demo.com",
-    "full_name": "New User",
+    "fullName": "New User from Swagger",
     "role": "user",
-    "is_active": true,
-    "tenant_id": "440d7300-d18a-30c3-9605-335544330000",
-    "created_at": "2024-12-28T10:00:00.000Z"
+    "tenantId": "22222222-2222",
+    "isActive": true,
+    "createdAt": "2026-03-04T00:00:00.000Z"
   }
 }
 ```
@@ -640,19 +608,19 @@ Create a new user in a tenant organization.
 // 400 - Max Users Reached
 {
   "success": false,
-  "message": "Maximum user limit reached for this tenant"
+  "message": "Subscription limit reached"
 }
 
 // 409 - Email Already Exists
 {
   "success": false,
-  "message": "Email already exists"
+  "message": "Email already exists in this tenant"
 }
 
 // 403 - Forbidden
 {
   "success": false,
-  "message": "Access denied"
+  "message": "Unauthorized access"
 }
 ```
 
@@ -665,7 +633,7 @@ curl -X POST http://localhost:5000/api/tenants/440d7300-d18a-30c3-9605-335544330
   -d '{
     "email": "newuser@demo.com",
     "password": "User@123",
-    "full_name": "New User",
+    "fullName": "New User",
     "role": "user"
   }'
 ```
@@ -706,32 +674,23 @@ GET /api/tenants/440d7300-d18a-30c3-9605-335544330000/users?role=user&isActive=t
 ```json
 {
   "success": true,
+  "message": "Users fetched successfully",
   "data": {
     "users": [
       {
-        "id": "770fa622-g4bd-63f6-c938-668877662222",
+        "id": "user-id-uuid",
         "email": "admin@demo.com",
-        "full_name": "Demo Admin",
+        "fullName": "Demo Admin",
         "role": "tenant_admin",
-        "is_active": true,
-        "created_at": "2024-12-20T10:00:00.000Z",
-        "last_login": "2024-12-28T09:30:00.000Z"
-      },
-      {
-        "id": "880gb733-h5ce-74g7-d049-779988773333",
-        "email": "user@demo.com",
-        "full_name": "Demo User",
-        "role": "user",
-        "is_active": true,
-        "created_at": "2024-12-22T14:00:00.000Z",
-        "last_login": "2024-12-27T16:45:00.000Z"
+        "isActive": true,
+        "createdAt": "2024-12-26T10:00:00.000Z"
       }
     ],
+    "total": 5,
     "pagination": {
-      "total": 3,
-      "page": 1,
-      "limit": 50,
-      "totalPages": 1
+      "currentPage": 1,
+      "totalPages": 1,
+      "limit": 50
     }
   }
 }
@@ -766,9 +725,9 @@ Update user information.
 
 ```json
 {
-  "full_name": "Updated Name",
+  "fullName": "Updated User Name",
   "role": "tenant_admin",
-  "is_active": true
+  "isActive": true
 }
 ```
 
@@ -776,7 +735,9 @@ Update user information.
 
 ```json
 {
-  "full_name": "Updated Name"
+  "fullName": "Updated User Name",
+  "role": "tenant_admin",
+  "isActive": true
 }
 ```
 
@@ -792,12 +753,10 @@ Update user information.
   "success": true,
   "message": "User updated successfully",
   "data": {
-    "id": "880gb733-h5ce-74g7-d049-779988773333",
-    "email": "user@demo.com",
-    "full_name": "Updated Name",
+    "id": "user-uuid",
+    "fullName": "Updated User Name",
     "role": "tenant_admin",
-    "is_active": true,
-    "updated_at": "2024-12-28T10:00:00.000Z"
+    "updatedAt": "2024-12-26T10:00:00.000Z"
   }
 }
 ```
@@ -808,7 +767,7 @@ Update user information.
 // 403 - Forbidden
 {
   "success": false,
-  "message": "You can only update your own profile"
+  "message": "Unauthorized access"
 }
 
 // 404 - Not Found
@@ -825,7 +784,7 @@ curl -X PUT http://localhost:5000/api/users/880gb733-h5ce-74g7-d049-779988773333
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
-    "full_name": "Updated Name",
+    "fullName": "Updated Name",
     "role": "tenant_admin"
   }'
 ```
@@ -862,13 +821,13 @@ Delete a user from the system.
 // 400 - Cannot Delete Self
 {
   "success": false,
-  "message": "You cannot delete your own account"
+  "message": "Cannot delete self"
 }
 
 // 403 - Forbidden
 {
   "success": false,
-  "message": "Access denied"
+  "message": "Unauthorized access"
 }
 
 // 404 - Not Found
@@ -909,8 +868,8 @@ Create a new project in the tenant.
 
 ```json
 {
-  "name": "Website Redesign",
-  "description": "Complete redesign of company website with modern UI/UX",
+  "name": "Swagger Test Project",
+  "description": "This project was created via Swagger testing",
   "status": "active"
 }
 ```
@@ -927,14 +886,13 @@ Create a new project in the tenant.
   "success": true,
   "message": "Project created successfully",
   "data": {
-    "id": "990hc844-i6df-85h8-e150-880099884444",
-    "name": "Website Redesign",
-    "description": "Complete redesign of company website with modern UI/UX",
+    "id": "project-uuid",
+    "tenantId": "tenant-uuid",
+    "name": "Swagger Test Project",
+    "description": "This project was created via Swagger testing",
     "status": "active",
-    "tenant_id": "440d7300-d18a-30c3-9605-335544330000",
-    "created_by": "770fa622-g4bd-63f6-c938-668877662222",
-    "created_by_name": "Demo Admin",
-    "created_at": "2024-12-28T10:00:00.000Z"
+    "createdBy": "creator-uuid",
+    "createdAt": "2024-12-27T08:00:00.000Z"
   }
 }
 ```
@@ -945,7 +903,7 @@ Create a new project in the tenant.
 // 400 - Max Projects Reached
 {
   "success": false,
-  "message": "Maximum project limit reached for this tenant"
+  "message": "Project limit reached"
 }
 
 // 400 - Validation Error
@@ -1011,35 +969,24 @@ GET /api/projects?page=1&limit=10&status=active&search=website&sortBy=created_at
   "data": {
     "projects": [
       {
-        "id": "990hc844-i6df-85h8-e150-880099884444",
-        "name": "Website Redesign",
-        "description": "Complete redesign of company website",
+        "id": "project-uuid",
+        "name": "Swagger Test Project",
+        "description": "This project was created via Swagger testing",
         "status": "active",
-        "task_count": 5,
-        "completed_tasks": 2,
-        "created_by": "770fa622-g4bd-63f6-c938-668877662222",
-        "created_by_name": "Demo Admin",
-        "created_at": "2024-12-28T10:00:00.000Z",
-        "updated_at": "2024-12-28T10:00:00.000Z"
-      },
-      {
-        "id": "aa0id955-j7eg-96i9-f261-991100995555",
-        "name": "Mobile App Development",
-        "description": "Native mobile application for iOS and Android",
-        "status": "active",
-        "task_count": 12,
-        "completed_tasks": 8,
-        "created_by": "770fa622-g4bd-63f6-c938-668877662222",
-        "created_by_name": "Demo Admin",
-        "created_at": "2024-12-26T14:30:00.000Z",
-        "updated_at": "2024-12-27T16:45:00.000Z"
+        "createdBy": {
+          "id": "creator-uuid",
+          "fullName": "Demo Admin"
+        },
+        "taskCount": 5,
+        "completedTaskCount": 2,
+        "createdAt": "2024-12-27T08:00:00.000Z"
       }
     ],
+    "total": 2,
     "pagination": {
-      "total": 5,
-      "page": 1,
-      "limit": 10,
-      "totalPages": 1
+      "currentPage": 1,
+      "totalPages": 1,
+      "limit": 20
     }
   }
 }
@@ -1074,9 +1021,9 @@ Update project information.
 
 ```json
 {
-  "name": "Website Redesign v2.0",
-  "description": "Updated project requirements and scope",
-  "status": "completed"
+  "name": "Updated Project Name",
+  "description": "Updated description via Postman",
+  "status": "archived"
 }
 ```
 
@@ -1092,11 +1039,11 @@ Update project information.
   "success": true,
   "message": "Project updated successfully",
   "data": {
-    "id": "990hc844-i6df-85h8-e150-880099884444",
-    "name": "Website Redesign v2.0",
-    "description": "Updated project requirements and scope",
-    "status": "completed",
-    "updated_at": "2024-12-28T10:00:00.000Z"
+    "id": "project-uuid",
+    "name": "Updated Project Name",
+    "description": "Updated description via Postman",
+    "status": "archived",
+    "updatedAt": "2024-12-27T08:00:00.000Z"
   }
 }
 ```
@@ -1107,13 +1054,13 @@ Update project information.
 // 403 - Forbidden
 {
   "success": false,
-  "message": "You don't have permission to update this project"
+  "message": "Unauthorized access"
 }
 
 // 404 - Not Found
 {
   "success": false,
-  "message": "Project not found"
+  "message": "Project not found or invalid project id provided"
 }
 ```
 
@@ -1152,7 +1099,7 @@ Delete a project and all its associated tasks.
 ```json
 {
   "success": true,
-  "message": "Project and all associated tasks deleted successfully"
+  "message": "Project deleted successfully"
 }
 ```
 
@@ -1162,13 +1109,13 @@ Delete a project and all its associated tasks.
 // 403 - Forbidden
 {
   "success": false,
-  "message": "You don't have permission to delete this project"
+  "message": "Unauthorized access"
 }
 
 // 404 - Not Found
 {
   "success": false,
-  "message": "Project not found"
+  "message": "Project not found or invalid project id provided"
 }
 ```
 
@@ -1202,12 +1149,11 @@ Create a new task in a project.
 
 ```json
 {
-  "title": "Design homepage mockup",
-  "description": "Create wireframes and high-fidelity mockups for homepage",
-  "status": "todo",
+  "title": "Test Task from Swagger",
+  "description": "This is a test task created via Swagger",
   "priority": "high",
-  "assigned_to": "880gb733-h5ce-74g7-d049-779988773333",
-  "due_date": "2024-12-31"
+  "assignedTo": null,
+  "dueDate": "2025-01-15"
 }
 ```
 
@@ -1226,18 +1172,16 @@ Create a new task in a project.
   "success": true,
   "message": "Task created successfully",
   "data": {
-    "id": "bb0je066-k8fh-a7j0-g372-aa2211aa6666",
-    "title": "Design homepage mockup",
-    "description": "Create wireframes and high-fidelity mockups for homepage",
+    "id": "task-uuid",
+    "projectId": "project-uuid",
+    "tenantId": "tenant-uuid",
+    "title": "Test Task from Swagger",
+    "description": "This is a test task created via Swagger",
     "status": "todo",
-    "priority": "high",
-    "project_id": "990hc844-i6df-85h8-e150-880099884444",
-    "assigned_to": "880gb733-h5ce-74g7-d049-779988773333",
-    "assigned_to_name": "Demo User",
-    "due_date": "2024-12-31",
-    "created_by": "770fa622-g4bd-63f6-c938-668877662222",
-    "created_by_name": "Demo Admin",
-    "created_at": "2024-12-28T10:00:00.000Z"
+    "priority": "medium",
+    "assignedTo": null,
+    "dueDate": "2025-01-15",
+    "createdAt": "2024-12-27T08:00:00.000Z"
   }
 }
 ```
@@ -1248,13 +1192,13 @@ Create a new task in a project.
 // 404 - Project Not Found
 {
   "success": false,
-  "message": "Project not found"
+  "message": "Project not found or invalid project id provided"
 }
 
 // 400 - Invalid Assignment
 {
   "success": false,
-  "message": "Cannot assign task to user from different tenant"
+  "message": "assignedTo user doesn\'t belong to same tenant"
 }
 
 // 400 - Validation Error
@@ -1280,8 +1224,8 @@ curl -X POST http://localhost:5000/api/projects/990hc844-i6df-85h8-e150-88009988
     "title": "Design homepage mockup",
     "description": "Create wireframes and mockups",
     "priority": "high",
-    "assigned_to": "880gb733-h5ce-74g7-d049-779988773333",
-    "due_date": "2024-12-31"
+    "assignedTo": "880gb733-h5ce-74g7-d049-779988773333",
+    "dueDate": "2024-12-31"
   }'
 ```
 
@@ -1322,41 +1266,25 @@ GET /api/projects/990hc844-i6df-85h8-e150-880099884444/tasks?status=todo&priorit
   "data": {
     "tasks": [
       {
-        "id": "bb0je066-k8fh-a7j0-g372-aa2211aa6666",
-        "title": "Design homepage mockup",
-        "description": "Create wireframes and high-fidelity mockups",
-        "status": "todo",
-        "priority": "high",
-        "project_id": "990hc844-i6df-85h8-e150-880099884444",
-        "assigned_to": "880gb733-h5ce-74g7-d049-779988773333",
-        "assigned_to_name": "Demo User",
-        "due_date": "2024-12-31",
-        "created_by": "770fa622-g4bd-63f6-c938-668877662222",
-        "created_by_name": "Demo Admin",
-        "created_at": "2024-12-28T10:00:00.000Z",
-        "updated_at": "2024-12-28T10:00:00.000Z"
-      },
-      {
-        "id": "cc0kf177-l9gi-b8k1-h483-bb3322bb7777",
-        "title": "Implement responsive navigation",
-        "description": "Create mobile-friendly navigation menu",
+        "id": "task-uuid",
+        "title": "Test Task from Postman",
+        "description": "This is a test task created via Postman",
         "status": "in_progress",
-        "priority": "medium",
-        "project_id": "990hc844-i6df-85h8-e150-880099884444",
-        "assigned_to": "880gb733-h5ce-74g7-d049-779988773333",
-        "assigned_to_name": "Demo User",
-        "due_date": "2025-01-05",
-        "created_by": "770fa622-g4bd-63f6-c938-668877662222",
-        "created_by_name": "Demo Admin",
-        "created_at": "2024-12-27T14:00:00.000Z",
-        "updated_at": "2024-12-28T09:00:00.000Z"
+        "priority": "high",
+        "assignedTo": {
+          "id": "assigned user uuid",
+          "fullName": "Demo user 1",
+          "email": "user1@demo.com"
+        },
+        "dueDate": "2025-01-15",
+        "createdAt": "2024-12-27T08:00:00.000Z"
       }
     ],
+    "total": 5,
     "pagination": {
-      "total": 5,
-      "page": 1,
-      "limit": 50,
-      "totalPages": 1
+      "currentPage": 1,
+      "totalPages": 1,
+      "limit": 50
     }
   }
 }
@@ -1406,10 +1334,9 @@ Update the status of a task (for Kanban board).
   "success": true,
   "message": "Task status updated successfully",
   "data": {
-    "id": "bb0je066-k8fh-a7j0-g372-aa2211aa6666",
-    "title": "Design homepage mockup",
+    "id": "task-uuid",
     "status": "in_progress",
-    "updated_at": "2024-12-28T10:00:00.000Z"
+    "updatedAt": "2024-12-27T08:00:00.000Z"
   }
 }
 ```
@@ -1420,7 +1347,7 @@ Update the status of a task (for Kanban board).
 // 403 - Forbidden
 {
   "success": false,
-  "message": "You don't have permission to update this task"
+  "message": "Task doesn\'t belong to user\'s tenant"
 }
 
 // 404 - Not Found
@@ -1470,12 +1397,11 @@ Update task details (full update).
 
 ```json
 {
-  "title": "Updated task title",
-  "description": "Updated description with more details",
-  "status": "in_progress",
-  "priority": "medium",
-  "assigned_to": "770fa622-g4bd-63f6-c938-668877662222",
-  "due_date": "2025-01-15"
+  "title": "Updated Task Title",
+  "description": "Updated description",
+  "priority": "low",
+  "assignedTo": null,
+  "dueDate": "2025-01-20"
 }
 ```
 
@@ -1494,16 +1420,22 @@ Update task details (full update).
   "success": true,
   "message": "Task updated successfully",
   "data": {
-    "id": "bb0je066-k8fh-a7j0-g372-aa2211aa6666",
-    "title": "Updated task title",
-    "description": "Updated description with more details",
-    "status": "in_progress",
-    "priority": "medium",
-    "project_id": "990hc844-i6df-85h8-e150-880099884444",
-    "assigned_to": "770fa622-g4bd-63f6-c938-668877662222",
-    "assigned_to_name": "Demo Admin",
-    "due_date": "2025-01-15",
-    "updated_at": "2024-12-28T10:00:00.000Z"
+    "tasks": [
+      {
+        "id": "task-uuid",
+        "title": "Test Task from Postman",
+        "description": "This is a test task created via Postman",
+        "status": "in_progress",
+        "priority": "high",
+        "assignedTo": {
+          "id": "assigned user uuid",
+          "fullName": "Demo user 1",
+          "email": "user1@demo.com"
+        },
+        "dueDate": "2025-01-15",
+        "updatedAt": "2024-12-27T08:00:00.000Z"
+      }
+    ]
   }
 }
 ```
@@ -1514,7 +1446,7 @@ Update task details (full update).
 // 403 - Forbidden
 {
   "success": false,
-  "message": "You don't have permission to update this task"
+  "message": "Task doesn\'t belong to user\'s tenant"
 }
 
 // 404 - Not Found
@@ -1526,7 +1458,7 @@ Update task details (full update).
 // 400 - Invalid Assignment
 {
   "success": false,
-  "message": "Cannot assign task to user from different tenant"
+  "message": "assignedTo user doesn\'t belong to same tenant"
 }
 ```
 
@@ -1539,7 +1471,7 @@ curl -X PUT http://localhost:5000/api/tasks/bb0je066-k8fh-a7j0-g372-aa2211aa6666
   -d '{
     "title": "Updated task title",
     "priority": "medium",
-    "due_date": "2025-01-15"
+    "dueDate": "2025-01-15"
   }'
 ```
 
@@ -1576,7 +1508,7 @@ Delete a task from the system.
 // 403 - Forbidden
 {
   "success": false,
-  "message": "You don't have permission to delete this task"
+  "message": "Task doesn\'t belong to user\'s tenant"
 }
 
 // 404 - Not Found
@@ -1640,7 +1572,7 @@ All errors follow a consistent format:
 ```json
 {
   "success": false,
-  "message": "Invalid or expired token"
+  "message": "Unauthorized access"
 }
 ```
 
@@ -1674,7 +1606,7 @@ All errors follow a consistent format:
 ```json
 {
   "success": false,
-  "message": "Email already exists"
+  "message": "Email already exists in this tenant"
 }
 ```
 
@@ -1741,9 +1673,9 @@ curl -X PUT http://localhost:5000/api/tenants/<tenant_id> \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "subscription_plan": "enterprise",
-    "max_users": 100,
-    "max_projects": 200
+    "subscriptionPlan": "enterprise",
+    "maxUsers": 100,
+    "maxProjects": 200
   }'
 
 # 5. View all projects across tenants
@@ -1773,7 +1705,7 @@ curl -X POST http://localhost:5000/api/tenants/<tenant_id>/users \
   -d '{
     "email": "newuser@demo.com",
     "password": "User@123",
-    "full_name": "New User",
+    "fullName": "New User",
     "role": "user"
   }'
 
@@ -1831,7 +1763,7 @@ curl -X POST http://localhost:5000/api/projects/<project_id>/tasks \
     "title": "Review design mockups",
     "description": "Provide feedback on homepage designs",
     "priority": "medium",
-    "due_date": "2024-12-30"
+    "dueDate": "2024-12-30"
   }'
 
 # 4. List tasks in project
@@ -1859,7 +1791,7 @@ curl -X PUT http://localhost:5000/api/users/<my_user_id> \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "full_name": "Updated Name"
+    "fullName": "Updated Name"
   }'
 ```
 
