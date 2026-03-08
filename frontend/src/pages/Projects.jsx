@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import projectService from '../services/projectService';
 import tenantService from '../services/tenantService';
 import toast from 'react-hot-toast';
-import { FaPlus, FaEdit, FaTrash, FaTimes, FaProjectDiagram, FaSearch } from 'react-icons/fa';
+import { FaPlus, FaEdit, FaTrash, FaTimes, FaProjectDiagram, FaSearch, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { getErrorMessage } from '../utils/helpers';
 
 const Projects = () => {
@@ -32,7 +32,7 @@ const Projects = () => {
     if (isSuperAdmin && tenants.length === 0) {
       fetchTenants();
     }
-  }, [filterStatus, currentPage]);
+  }, [filterStatus, filterTenant, currentPage]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -335,14 +335,14 @@ const Projects = () => {
                 disabled={currentPage === 1}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                Previous
+                <FaChevronLeft></FaChevronLeft>
               </button>
               <button
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                Next
+                <FaChevronRight></FaChevronRight>
               </button>
             </div>
           </div>

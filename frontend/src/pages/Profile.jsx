@@ -6,7 +6,7 @@ import { FaUser, FaSave } from 'react-icons/fa';
 import { getErrorMessage } from '../utils/helpers';
 
 const Profile = () => {
-  const { user, checkAuth } = useAuth();
+  const { user, checkAuth, isSuperAdmin } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
@@ -70,7 +70,8 @@ const Profile = () => {
                   name="fullName"
                   value={formData.fullName}
                   onChange={handleChange}
-                  required
+                  required={!isSuperAdmin}
+                  disabled={isSuperAdmin}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>

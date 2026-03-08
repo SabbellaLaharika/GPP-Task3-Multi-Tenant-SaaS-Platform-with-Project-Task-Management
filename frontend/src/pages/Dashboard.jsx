@@ -44,7 +44,7 @@ const Dashboard = () => {
       // 1. Fetch Projects (Endpoint 13 - Role-aware)
       const projectsResponse = await projectService.getAll({ limit: 50 }); // Fetch enough for stats
       const projectsList = projectsResponse.data?.projects || [];
-      setProjects(projectsList.slice(0, 4)); // Keep 4 for display
+      setProjects(projectsList.slice(0, 5)); // Keep 5 for display
 
       // 2. Calculate Stats from Projects
       let totalTasksCount = 0;
@@ -66,7 +66,7 @@ const Dashboard = () => {
       // 3. Role-specific additional data
       if (isSuperAdmin) {
         // Endpoint 7: List all tenants
-        const tenantsRes = await tenantService.getAll({ limit: 4 });
+        const tenantsRes = await tenantService.getAll({ limit: 5 });
         const tenantsList = tenantsRes.data?.tenants || [];
         setTenants(tenantsList);
         dashboardStats.totalTenants = tenantsRes.data?.pagination?.totalTenants || tenantsList.length || 0;
@@ -140,6 +140,11 @@ const Dashboard = () => {
     if (hour < 12) return 'Good Morning';
     if (hour < 18) return 'Good Afternoon';
     return 'Good Evening';
+  };
+
+  const isOverdue = (task) => {
+    if (!task.dueDate || task.status === 'completed') return false;
+    return new Date(task.dueDate) < new Date().setHours(0, 0, 0, 0);
   };
 
   if (loading) {
@@ -241,7 +246,7 @@ const Dashboard = () => {
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Recent Projects Section */}
-        <div className={`bg-white rounded-lg shadow overflow-hidden flex flex-col ${isSuperAdmin ? 'xl:col-span-2' : ''}`}>
+        <div className="bg-white rounded-lg shadow overflow-hidden flex flex-col">
           <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-4 flex justify-between items-center">
             <h2 className="text-xl font-bold text-white flex items-center gap-2 pb-0 mb-0">
               <FaProjectDiagram />
@@ -257,7 +262,7 @@ const Dashboard = () => {
               <p>No projects found.</p>
             </div>
           ) : (
-            <div className={`grid grid-cols-1 ${isSuperAdmin ? 'sm:grid-cols-2' : ''} divide-y divide-gray-100 flex-1`}>
+            <div className="divide-y divide-gray-100 flex-1">
               {projects.map(project => (
                 <Link key={project.id} to={`/projects/${project.id}`} className="block p-5 hover:bg-gray-50 transition-colors group">
                   <div className="flex items-center justify-between">
@@ -291,7 +296,7 @@ const Dashboard = () => {
 
         {/* Super Admin: Recent Organizations Section */}
         {isSuperAdmin && (
-          <div className="bg-white rounded-lg shadow overflow-hidden flex flex-col xl:col-span-2">
+          <div className="bg-white rounded-lg shadow overflow-hidden flex flex-col">
             <div className="bg-gradient-to-r from-purple-500 to-indigo-600 px-6 py-4 flex justify-between items-center">
               <h2 className="text-xl font-bold text-white flex items-center gap-2 pb-0 mb-0">
                 <FaBuilding />
@@ -307,7 +312,7 @@ const Dashboard = () => {
                 <p>No organizations found.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 divide-y divide-gray-100 flex-1">
+              <div className="divide-y divide-gray-100 flex-1">
                 {tenants.map(tenant => (
                   <div key={tenant.id} className="p-5 hover:bg-gray-50 transition-colors group relative">
                     <div className="flex items-center justify-between">
@@ -319,11 +324,11 @@ const Dashboard = () => {
                           <h3 className="text-lg font-semibold text-gray-900">{tenant.name}</h3>
                           <div className="flex items-center gap-2 mt-1">
                             <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${tenant.subscriptionPlan === 'enterprise' ? 'bg-purple-100 text-purple-700' :
-                                tenant.subscriptionPlan === 'pro' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
+                              tenant.subscriptionPlan === 'pro' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'
                               }`}>
                               {tenant.subscriptionPlan}
                             </span>
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${tenant.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${tenant.status === 'active' ? 'bg-green-100 text-green-700' : (tenant.status === 'trial' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700')}`}>
                               {tenant.status}
                             </span>
                           </div>
@@ -383,6 +388,11 @@ const Dashboard = () => {
                       <span className={`text-[12px] px-2.5 py-1.5 rounded-full font-medium capitalize ${getTaskStatusBadgeColor(task.status)}`}>
                         {(task.status || 'todo').replace('_', ' ')}
                       </span>
+                      {isOverdue(task) && (
+                        <span className="text-[12px] px-2.5 py-1.5 rounded-full font-bold bg-red-600 text-white animate-pulse">
+                          OVERDUE
+                        </span>
+                      )}
                       <span className="text-[12px] text-indigo-700 flex items-center gap-1 font-semibold bg-indigo-50 border border-indigo-100 px-2.5 py-1.5 rounded-full">
                         <FaProjectDiagram className="text-indigo-400" />
                         {task.projectName}

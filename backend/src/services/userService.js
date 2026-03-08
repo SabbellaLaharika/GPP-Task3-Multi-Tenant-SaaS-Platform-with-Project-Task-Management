@@ -198,15 +198,15 @@ const listTenantUsers = async (tenantId, filters = {}) => {
 const updateUser = async (userId, updateData, requestingUserId, requestingUserRole, requestingUserTenantId) => {
   try {
 
-    // Tenant admin can update everything
-    // Users can update ownly their fullName
+    // Tenant admin can update most fields
+    // Super admin and Users can only update their own fullName (or name in general)
     if (requestingUserRole !== 'tenant_admin') {
-      if (updateData.role || updateData.isActive || requestingUserRole === 'super_admin') {
+      if (updateData.role !== undefined || updateData.isActive !== undefined) {
         throw new Error('Unauthorized access');
       }
     }
 
-    const allowedFields = requestingUserRole === "tenant_admin"
+    const allowedFields = (requestingUserRole === "tenant_admin")
       ? ['fullName', 'role', 'isActive']
       : ['fullName'];
     const filteredData = {};

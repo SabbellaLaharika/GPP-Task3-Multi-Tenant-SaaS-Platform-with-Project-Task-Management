@@ -10,7 +10,7 @@ import ConfirmDialog from '../components/Common/ConfirmDialog';
 import { formatDate, getErrorMessage } from '../utils/helpers';
 import toast from 'react-hot-toast';
 import { useParams } from 'react-router-dom';
-import { FaUsers } from 'react-icons/fa';
+import { FaUsers, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 
 const Users = () => {
   const { id } = useParams();
@@ -260,14 +260,14 @@ const Users = () => {
               disabled={currentPage === 1}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              Previous
+              <FaChevronLeft />
             </button>
             <button
               onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
               disabled={currentPage === totalPages}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              Next
+              <FaChevronRight />
             </button>
           </div>
         </div>

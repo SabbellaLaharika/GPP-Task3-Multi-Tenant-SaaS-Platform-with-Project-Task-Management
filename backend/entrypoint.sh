@@ -30,12 +30,12 @@ echo "✅ Database is ready!"
 
 # Run migrations
 echo "🚀 Running database migrations..."
-npm run migrate
+node migrations/run-migrations.js
 
 # Run seeds
 echo "🌱 Seeding database..."
-npm run seed || echo "⚠️  Seeding failed (might be duplicates). Continuing..."
+node seeders/run-seeders.js || echo "⚠️  Seeding failed (might be duplicates). Continuing..."
 
 # Start application
 echo "🎉 Starting application..."
-exec npm start
+exec node src/server.js

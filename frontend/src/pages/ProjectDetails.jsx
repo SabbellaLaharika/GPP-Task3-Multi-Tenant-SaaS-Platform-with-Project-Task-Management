@@ -5,8 +5,32 @@ import projectService from '../services/projectService';
 import taskService from '../services/taskService';
 import userService from '../services/userService';
 import toast from 'react-hot-toast';
-import { FaArrowLeft, FaPlus, FaEdit, FaTrash, FaTimes, FaTasks } from 'react-icons/fa';
+import { FaArrowLeft, FaPlus, FaEdit, FaTrash, FaTimes, FaTasks, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { getErrorMessage } from '../utils/helpers';
+
+// Helper functions moved to top level for access by TaskCard
+const getStatusColor = (status) => {
+  switch ((status || '').toLowerCase()) {
+    case 'completed': return 'bg-emerald-100 text-emerald-700 border border-emerald-200';
+    case 'in_progress': return 'bg-sky-100 text-sky-700 border border-sky-200';
+    case 'todo': return 'bg-amber-100 text-amber-700 border border-amber-200';
+    default: return 'bg-slate-100 text-slate-700 border border-slate-200';
+  }
+};
+
+const isOverdue = (task) => {
+  if (!task.dueDate || task.status === 'completed') return false;
+  return new Date(task.dueDate) < new Date().setHours(0, 0, 0, 0);
+};
+
+const getPriorityColor = (priority) => {
+  switch (priority?.toLowerCase()) {
+    case 'high': return 'bg-red-100 text-red-500';
+    case 'medium': return 'bg-yellow-100 text-yellow-600';
+    case 'low': return 'bg-green-100 text-green-600';
+    default: return 'bg-gray-100 text-gray-600';
+  }
+};
 
 const ProjectDetails = () => {
   const { id } = useParams();
@@ -209,25 +233,6 @@ const ProjectDetails = () => {
     setEditingTask(null);
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'completed': return 'bg-green-100/70 text-green-700';
-      case 'in_progress': return 'bg-blue-100 text-blue-700';
-      case 'todo': return 'bg-gray-100 text-gray-700';
-      case 'active': return 'bg-green-100/70 text-green-700';
-      case 'archived': return 'bg-gray-100 text-gray-700';
-      default: return 'bg-gray-100 text-gray-700';
-    }
-  };
-
-  const getPriorityColor = (priority) => {
-    switch (priority?.toLowerCase()) {
-      case 'high': return 'bg-red-100 text-red-500';
-      case 'medium': return 'bg-yellow-100 text-yellow-600';
-      case 'low': return 'bg-green-100 text-green-600';
-      default: return 'bg-gray-100 text-gray-600';
-    }
-  };
 
   // Group tasks by status with applied filters
   const processedTasks = tasks; // Filters now handled by backend
@@ -395,20 +400,22 @@ const ProjectDetails = () => {
           </div>
 
           {/* User Filter */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-600">Assignee:</span>
-            <select
-              value={filterTaskUser}
-              onChange={(e) => setFilterTaskUser(e.target.value)}
-              className="px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white max-w-[200px]"
-            >
-              <option value="all">All Users</option>
-              <option value="unassigned">Unassigned Only</option>
-              {users.map(u => (
-                <option key={u.id} value={u.id}>{u.fullName}</option>
-              ))}
-            </select>
-          </div>
+          {!isSuperAdmin && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-600">Assignee:</span>
+              <select
+                value={filterTaskUser}
+                onChange={(e) => setFilterTaskUser(e.target.value)}
+                className="px-3 py-1.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white max-w-[200px]"
+              >
+                <option value="all">All Users</option>
+                <option value="unassigned">Unassigned Only</option>
+                {users.map(u => (
+                  <option key={u.id} value={u.id}>{u.fullName}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* Active Filters Counter */}
@@ -438,8 +445,6 @@ const ProjectDetails = () => {
                 onEdit={handleEditClick}
                 onDelete={handleDelete}
                 onStatusChange={handleStatusChange}
-                getPriorityColor={getPriorityColor}
-                getStatusColor={getStatusColor}
               />
             ))}
             {todoTasks.length === 0 && (
@@ -465,8 +470,6 @@ const ProjectDetails = () => {
                 onEdit={handleEditClick}
                 onDelete={handleDelete}
                 onStatusChange={handleStatusChange}
-                getPriorityColor={getPriorityColor}
-                getStatusColor={getStatusColor}
               />
             ))}
             {inProgressTasks.length === 0 && (
@@ -492,8 +495,6 @@ const ProjectDetails = () => {
                 onEdit={handleEditClick}
                 onDelete={handleDelete}
                 onStatusChange={handleStatusChange}
-                getPriorityColor={getPriorityColor}
-                getStatusColor={getStatusColor}
               />
             ))}
             {completedTasks.length === 0 && (
@@ -502,31 +503,6 @@ const ProjectDetails = () => {
           </div>
         </div>
       </div>
-
-      {/* Pagination Controls */}
-      {totalPages > 1 && (
-        <div className="mt-8 flex items-center justify-between bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-          <span className="text-sm text-gray-500">
-            Page <span className="font-semibold text-gray-900">{currentPage}</span> of {totalPages}
-          </span>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Previous
-            </button>
-            <button
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-              disabled={currentPage === totalPages}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Create/Edit Task Modal */}
       {showModal && (
@@ -671,7 +647,7 @@ const ProjectDetails = () => {
 };
 
 // Task Card Component
-const TaskCard = ({ task, users, user, isSuperAdmin, onEdit, onDelete, onStatusChange, getPriorityColor, getStatusColor }) => {
+const TaskCard = ({ task, users, user, isSuperAdmin, onEdit, onDelete, onStatusChange }) => {
   const assignedUserId = task.assignedTo?.id || task.assignedTo;
   const assignedUser = users.find(u => u.id === assignedUserId);
 
@@ -712,7 +688,12 @@ const TaskCard = ({ task, users, user, isSuperAdmin, onEdit, onDelete, onStatusC
         <span className={`text-[12px] px-2.5 py-1.5 rounded-full font-medium capitalize ${getStatusColor(task.status)}`}>
           {(task.status || 'todo').replace('_', ' ')}
         </span>
-        {assignedUser && (
+        {isOverdue(task) && (
+          <span className="text-[12px] px-2.5 py-1.5 rounded-full font-bold bg-red-600 text-white animate-pulse">
+            OVERDUE
+          </span>
+        )}
+        {!isSuperAdmin && assignedUser && (
           <span className="text-[12px] px-2.5 py-1.5 rounded-full bg-purple-100 text-purple-600 font-medium">
             {assignedUser.fullName}
           </span>

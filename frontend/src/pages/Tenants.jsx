@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import tenantService from '../services/tenantService';
 import toast from 'react-hot-toast';
-import { FaBuilding, FaCheckCircle, FaTimesCircle, FaSearch, FaEdit, FaTimes } from 'react-icons/fa';
+import { FaBuilding, FaCheckCircle, FaTimesCircle, FaSearch, FaEdit, FaTimes, FaQuestionCircle, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 
 const SUBSCRIPTION_LIMITS = {
   free: { maxUsers: 5, maxProjects: 3 },
@@ -111,10 +111,12 @@ const Tenants = () => {
   };
 
   const getStatusBadge = (status) => {
-    if (status === 'active') {
-      return <span className="flex items-center gap-1 text-green-600"><FaCheckCircle /> Active</span>;
-    }
-    return <span className="flex items-center gap-1 text-red-600"><FaTimesCircle /> {status.charAt(0).toUpperCase() + status.slice(1)}</span>;
+    const statusBadges = {
+      'active': <span className="flex items-center gap-1 text-green-600"><FaCheckCircle /> Active</span>,
+      'trial': <span className="flex items-center gap-1 text-yellow-600"><FaQuestionCircle /> Trial</span>,
+      'suspended': <span className="flex items-center gap-1 text-red-600"><FaTimesCircle /> Suspended</span>,
+    };
+    return statusBadges[status] || statusBadges.active;
   };
 
   const renderCapacity = (current, plan, type) => {
@@ -237,14 +239,14 @@ const Tenants = () => {
                   disabled={currentPage === 1}
                   className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  Previous
+                  <FaChevronLeft />
                 </button>
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                   disabled={currentPage === totalPages}
                   className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  Next
+                  <FaChevronRight />
                 </button>
               </div>
             </div>
@@ -302,7 +304,7 @@ const Tenants = () => {
                   className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
                 >
                   <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
+                  <option value="trial">Trial</option>
                   <option value="suspended">Suspended</option>
                 </select>
               </div>

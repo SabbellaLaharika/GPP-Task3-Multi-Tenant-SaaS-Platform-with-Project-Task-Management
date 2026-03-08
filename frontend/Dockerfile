@@ -16,7 +16,7 @@ COPY . .
 RUN npm run build
 
 # Production stage
-FROM nginx:alpine
+FROM nginx:stable-alpine-slim
 
 # Copy built files
 COPY --from=build /app/dist /usr/share/nginx/html

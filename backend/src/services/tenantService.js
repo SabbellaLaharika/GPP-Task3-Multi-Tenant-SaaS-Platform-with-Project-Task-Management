@@ -87,7 +87,7 @@ const updateTenant = async (tenantId, updateData, userRole, requestingUserId) =>
   }
 
   const allowedFields = userRole === 'super_admin'
-    ? ['name', "subscriptionPlan", 'maxUsers', 'maxProjects', 'status']
+    ? ['name', 'subscriptionPlan', 'maxUsers', 'maxProjects', 'status']
     : ['name'];
 
   const filteredData = {};
@@ -100,7 +100,6 @@ const updateTenant = async (tenantId, updateData, userRole, requestingUserId) =>
   if (Object.keys(filteredData).length === 0) {
     throw new Error('No valid fields to update');
   }
-
   const fieldsMapping = {
     name: 'name',
     subscriptionPlan: 'subscription_plan',

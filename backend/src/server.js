@@ -8,7 +8,7 @@ const PORT = process.env.PORT || 5000;
 pool.query('SELECT NOW()')
   .then(() => {
     logger.info('✅ Database connection established');
-    
+
     // Start server
     const server = app.listen(PORT, () => {
       logger.info(`🚀 Server running on port ${PORT}`);

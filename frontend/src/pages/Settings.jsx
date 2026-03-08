@@ -130,14 +130,20 @@ const Settings = () => {
         return;
       }
 
-      console.log('Updating tenant:', tenantId, formData);
-      await tenantService.update(tenantId, {
-        name: formData.name,
-        subscriptionPlan: formData.subscriptionPlan,
-        maxUsers: parseInt(formData.maxUsers),
-        maxProjects: parseInt(formData.maxProjects),
-        status: formData.status
-      });
+      const updatePayload = {
+        name: formData.name
+      };
+
+      // Only super admin can update these fields
+      if (isSuperAdmin) {
+        updatePayload.subscriptionPlan = formData.subscriptionPlan;
+        updatePayload.maxUsers = parseInt(formData.maxUsers);
+        updatePayload.maxProjects = parseInt(formData.maxProjects);
+        updatePayload.status = formData.status;
+      }
+
+      console.log('Updating tenant:', tenantId, updatePayload);
+      await tenantService.update(tenantId, updatePayload);
 
       toast.success('Settings updated successfully');
       fetchData();
@@ -346,7 +352,7 @@ const Settings = () => {
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
+                        <option value="trial">Trial</option>
                         <option value="suspended">Suspended</option>
                       </select>
                     </div>
