@@ -119,12 +119,7 @@ paths:
           application/json:
             schema:
               type: object
-              required:
-                - tenantName
-                - subdomain
-                - adminEmail
-                - adminPassword
-                - adminFullName
+              required: [tenantName, subdomain, adminEmail, adminPassword, adminEmail]
               properties:
                 tenantName:
                   type: string
@@ -228,9 +223,7 @@ paths:
           application/json:
             schema:
               type: object
-              required:
-                - email
-                - password
+              required: [email, password]
               properties:
                 email:
                   type: string
@@ -530,16 +523,31 @@ paths:
                               example: active
                             subscriptionPlan:
                               type: string
-                              example: professional
+                              example: pro
                             totalUsers:
-                              type: number
+                              type: integer
                               example: 3
                             totalProjects:
-                              type: number
+                              type: integer
                               example: 2
                             createdAt:
                               type: timestamp
                               example: '2024-12-26T10:00:00.000Z'
+                      pagination:
+                        type: object
+                        properties:
+                          currentPage:
+                            type: integer
+                            example: 1
+                          totalPages:
+                            type: integer
+                            example: 10
+                          totalTenants:
+                            type: integer
+                            example: 100
+                          limit:
+                            type: integer
+                            example: 10
         '403':
           $ref: '#/components/responses/Forbidden'
   /tenants/{tenantId}/users:
@@ -559,11 +567,7 @@ paths:
           application/json:
             schema:
               type: object
-              required:
-                - email
-                - password
-                - fullName
-                - role
+              required: [email, password, fullName, role]
               properties:
                 email:
                   type: string

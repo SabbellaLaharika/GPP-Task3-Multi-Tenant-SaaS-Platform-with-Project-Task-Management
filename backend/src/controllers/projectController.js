@@ -18,7 +18,11 @@ const createProject = async (req, res, next) => {
 
 const listProjects = async (req, res, next) => {
   try {
-    const result = await projectService.listProjects(req.tenantId, req.query);
+    const result = await projectService.listProjects(
+      req.tenantId,
+      req.user.role,
+      req.query
+    );
     res.status(200).json(result);
   } catch (error) {
     next(error);

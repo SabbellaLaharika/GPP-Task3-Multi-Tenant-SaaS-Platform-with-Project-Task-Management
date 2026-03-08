@@ -73,61 +73,76 @@ const createProject = async (projectData, userId, tenantId) => {
   }
 };
 
-const listProjects = async (tenantId, filters = {}) => {
+const listProjects = async (tenantId, userRole, filters = {}) => {
   try {
-    const { page = 1, limit = 20, status, search } = filters;
+    const { page = 1, limit = 20, status, search, tenantId: filterTenantId, id: filterId } = filters;
     const offset = (page - 1) * limit;
 
-    let query = `
+    const conditions = [];
+    const params = [];
+
+    // Security & Filtering: Only super_admin bypasses tenant isolation
+    if (userRole === 'super_admin') {
+      if (filterTenantId && filterTenantId !== 'all') {
+        conditions.push(`p.tenant_id = $${params.length + 1}`);
+        params.push(filterTenantId);
+      }
+    } else {
+      conditions.push(`p.tenant_id = $${params.length + 1}`);
+      params.push(tenantId);
+    }
+
+    if (filterId) {
+      conditions.push(`p.id = $${params.length + 1}`);
+      params.push(filterId);
+    }
+
+    if (status) {
+      conditions.push(`p.status = $${params.length + 1}`);
+      params.push(status);
+    }
+
+    if (search) {
+      conditions.push(`p.name ILIKE $${params.length + 1}`);
+      params.push(`%${search}%`);
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const query = `
       SELECT p.*, u.full_name as created_by_name,
              (SELECT COUNT(*) FROM tasks WHERE project_id = p.id) as task_count,
              (SELECT COUNT(*) FROM tasks WHERE project_id = p.id AND status = 'completed') as completed_task_count
       FROM projects p
       LEFT JOIN users u ON p.created_by = u.id
-      WHERE p.tenant_id = $1
+      ${whereClause}
+      ORDER BY p.created_at DESC
+      LIMIT $${params.length + 1} OFFSET $${params.length + 2}
     `;
-    const params = [tenantId];
-    let paramCounter = 2;
 
-    if (status) {
-      query += ` AND p.status = $${paramCounter++}`;
-      params.push(status);
-    }
+    const countQuery = `SELECT COUNT(*) FROM projects p ${whereClause}`;
 
-    if (search) {
-      query += ` AND p.name ILIKE $${paramCounter++}`;
-      params.push(`%${search}%`);
-    }
+    const result = await pool.query(query, [...params, limit, offset]);
+    const countResult = await pool.query(countQuery, params);
 
-    query += ` ORDER BY p.created_at DESC LIMIT $${paramCounter++} OFFSET $${paramCounter}`;
-    params.push(limit, offset);
+    const projectsWithStats = result.rows.map((project) => {
+      return {
+        id: project.id,
+        tenantId: project.tenant_id,
+        name: project.name,
+        description: project.description,
+        status: project.status,
+        createdBy: {
+          id: project.created_by,
+          fullName: project.created_by_name
+        },
+        taskCount: parseInt(project.task_count),
+        completedTaskCount: parseInt(project.completed_task_count),
+        createdAt: project.created_at
+      }
+    });
 
-    const result = await pool.query(query, params);
-
-    const countResult = await pool.query(
-      'SELECT COUNT(*) FROM projects WHERE tenant_id = $1',
-      [tenantId]
-    );
-
-    const projectsWithStats = await Promise.all(
-      result.rows.map(async (project) => {
-        return {
-          id: project.id,
-          tenantId: project.tenant_id,
-          name: project.name,
-          description: project.description,
-          status: project.status,
-          createdBy: {
-            id: project.created_by,
-            name: project.created_by_name
-          },
-          taskCount: parseInt(project.task_count),
-          completedTaskCount: parseInt(project.completed_task_count),
-          createdAt: project.created_at
-        }
-      })
-    );
-    logger.info('Projects list retrieved', { count: result.rows.length });
+    logger.info('Projects list retrieved', { count: result.rows.length, role: userRole });
     return {
       success: true,
       message: 'Projects retrieved successfully',
@@ -135,9 +150,9 @@ const listProjects = async (tenantId, filters = {}) => {
         projects: projectsWithStats,
         total: parseInt(countResult.rows[0].count),
         pagination: {
-          currentPage: page,
+          currentPage: parseInt(page),
           totalPages: Math.ceil(parseInt(countResult.rows[0].count) / limit),
-          limit: limit,
+          limit: parseInt(limit),
         }
       },
     };
@@ -151,7 +166,12 @@ const updateProject = async (projectId, updateData, userId, tenantId, userRole) 
   try {
     const client = await pool.connect();
 
-    // Check authorization: tenant_admin OR project creator
+    // Check authorization: super_admin (view-only), tenant_admin OR user (edit)
+    if (userRole === 'super_admin') {
+      client.release();
+      throw new Error('Unauthorized access: Super Admin is view-only');
+    }
+
     if (userRole !== 'tenant_admin') {
       const projectCheck = await client.query(
         'SELECT created_by FROM projects WHERE id = $1 AND tenant_id = $2',
@@ -163,10 +183,8 @@ const updateProject = async (projectId, updateData, userId, tenantId, userRole) 
         throw new Error('Project not found');
       }
 
-      if (projectCheck.rows[0].created_by !== userId) {
-        client.release();
-        throw new Error('Unauthorized access');
-      }
+      // Regular User can edit any project in their tenant based on requirement "regular user can see all projects and tasks also can edit"
+      // So we don't need to check created_by anymore if they are from the same tenant
     }
     client.release();
 
@@ -229,22 +247,15 @@ const deleteProject = async (projectId, tenantId, userId, userRole) => {
   try {
     const client = await pool.connect();
 
-    // Check authorization: tenant_admin OR project creator
+    // Check authorization: ONLY tenant_admin can delete
+    if (userRole === 'super_admin') {
+      client.release();
+      throw new Error('Unauthorized access: Super Admin is view-only');
+    }
+
     if (userRole !== 'tenant_admin') {
-      const projectCheck = await client.query(
-        'SELECT created_by FROM projects WHERE id = $1 AND tenant_id = $2',
-        [projectId, tenantId]
-      );
-
-      if (projectCheck.rows.length === 0) {
-        client.release();
-        throw new Error('Project not found');
-      }
-
-      if (projectCheck.rows[0].created_by !== userId) {
-        client.release();
-        throw new Error('Unauthorized access');
-      }
+      client.release();
+      throw new Error('Unauthorized access: Only Tenant Admins can delete projects');
     }
     client.release();
 

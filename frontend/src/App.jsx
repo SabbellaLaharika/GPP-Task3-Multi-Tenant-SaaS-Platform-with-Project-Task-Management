@@ -13,6 +13,7 @@ import Users from './pages/Users';
 import Settings from './pages/Settings';
 import Tenants from './pages/Tenants';
 import Profile from './pages/Profile';
+import Tasks from './pages/Tasks';
 
 // Layout
 import PrivateRoute from './components/Auth/PrivateRoute';
@@ -44,33 +45,34 @@ function App() {
             },
           }}
         />
-        
+
         <Routes>
           {/* Public routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          
+
           {/* Protected routes */}
           <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="projects" element={<Projects />} />
             <Route path="projects/:id" element={<ProjectDetails />} />
+            <Route path="tasks" element={<Tasks />} />
             <Route path="users" element={<Users />} />
             <Route path="settings" element={<Settings />} />
             <Route path="profile" element={<Profile />} />
             {/* Super Admin Only Route - ADD THIS */}
-            <Route path="tenants" element={ <Tenants />}  /> 
-          </Route> 
-          
+            <Route path="tenants" element={<Tenants />} />
+          </Route>
+
           {/* 404 */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </Router>
     </AuthProvider>
-   /* <BrowserRouter future={{ v7_relativeSplatPath: true }}>
-      { routes }
-    </BrowserRouter> */
+    /* <BrowserRouter future={{ v7_relativeSplatPath: true }}>
+       { routes }
+     </BrowserRouter> */
   );
 }
 

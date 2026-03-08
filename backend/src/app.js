@@ -11,8 +11,6 @@ const tenantRoutes = require('./routes/tenantRoutes');
 const userRoutes = require('./routes/userRoutes');
 const projectRoutes = require('./routes/projectRoutes');
 const taskRoutes = require('./routes/taskRoutes');
-const dashboardRoutes = require('./routes/dashboardRoutes');
-const superAdminRoutes = require('./routes/superAdminRoutes');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpecs = require('./config/swagger');
 
@@ -69,6 +67,7 @@ app.use((req, res, next) => {
 });
 
 app.use('/api', healthRoutes);
+// API Routes (mounted below)
 
 // Swagger Documentation
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs, {
@@ -134,8 +133,6 @@ app.use('/api/tenants', tenantRoutes);
 app.use('/api', userRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api', taskRoutes);
-app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/superadmin', superAdminRoutes);
 // 404 handler
 app.use(notFoundHandler);
 

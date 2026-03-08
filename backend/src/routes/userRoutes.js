@@ -6,9 +6,6 @@ const authorize = require('../middleware/authorize');
 const tenantFilter = require('../middleware/tenantFilter');
 const { validate, schemas } = require('../middleware/validator');
 
-
-router.get('/users/:userId/tasks', authenticate, userController.getUserTasks);
-
 router.post('/tenants/:tenantId/users', authenticate, authorize('tenant_admin'), tenantFilter, validate(schemas.createUser), userController.addUserToTenant);
 
 router.get('/tenants/:tenantId/users', authenticate, tenantFilter, userController.listTenantUsers);

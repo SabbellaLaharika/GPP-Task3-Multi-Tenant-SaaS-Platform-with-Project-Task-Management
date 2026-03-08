@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import projectService from '../services/projectService';
+import tenantService from '../services/tenantService';
 import toast from 'react-hot-toast';
 import { FaPlus, FaEdit, FaTrash, FaTimes, FaProjectDiagram, FaSearch } from 'react-icons/fa';
-import { getAllProjects,getAllTenantsWithStats } from '../services/superAdminService';
+import { getErrorMessage } from '../utils/helpers';
 
 const Projects = () => {
   const { user, isSuperAdmin } = useAuth();
@@ -16,6 +17,9 @@ const Projects = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [tenants, setTenants] = useState([]);
   const [filterTenant, setFilterTenant] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [limit] = useState(6); // Set a small limit for better pagination visibility
 
   const [formData, setFormData] = useState({
     name: '',
@@ -25,24 +29,37 @@ const Projects = () => {
 
   useEffect(() => {
     fetchProjects();
-    if (isSuperAdmin) {
+    if (isSuperAdmin && tenants.length === 0) {
       fetchTenants();
     }
-  }, []);
+  }, [filterStatus, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatus, filterTenant]);
 
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      if(isSuperAdmin){
-        const response = await getAllProjects();
-        setProjects(response.data.projects || []);
+      const params = {
+        page: currentPage,
+        limit: limit
+      };
+      if (filterStatus !== 'all') {
+        params.status = filterStatus;
       }
-      else {
-        const response = await projectService.getAll();
+      if (isSuperAdmin && filterTenant !== 'all') {
+        params.tenantId = filterTenant;
+      }
+      const response = await projectService.getAll(params);
+      if (response.success) {
         setProjects(response.data.projects || []);
+        if (response.data.pagination) {
+          setTotalPages(response.data.pagination.totalPages);
+        }
       }
     } catch (error) {
-      toast.error('Failed to load projects');
+      toast.error(getErrorMessage(error, 'Failed to load projects'));
       console.error(error);
     } finally {
       setLoading(false);
@@ -50,13 +67,13 @@ const Projects = () => {
   };
 
   const fetchTenants = async () => {
-  try {
-    const response = await getAllTenantsWithStats();
-    setTenants(response.data.tenants || []);
-  } catch (error) {
-    console.error('Failed to load tenants', error);
-  }
-};
+    try {
+      const response = await tenantService.getAll({ page: 1, limit: 100 });
+      setTenants(response.data.tenants || []);
+    } catch (error) {
+      console.error('Failed to load tenants', error);
+    }
+  };
 
   const handleInputChange = (e) => {
     setFormData({
@@ -104,7 +121,8 @@ const Projects = () => {
       setFormData({ name: '', description: '', status: 'active' });
       fetchProjects();
     } catch (error) {
-      toast.error(error.message || 'Operation failed');
+      const errorMsg = error.response?.data?.message || error.response?.data?.errors?.[0]?.message || error.message || 'Operation failed';
+      toast.error(errorMsg);
       console.error(error);
     } finally {
       setLoading(false);
@@ -122,7 +140,8 @@ const Projects = () => {
       toast.success('Project deleted successfully');
       fetchProjects();
     } catch (error) {
-      toast.error('Failed to delete project');
+      const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message || 'Failed to delete project';
+      toast.error(errorMsg);
       console.error(error);
     } finally {
       setLoading(false);
@@ -135,13 +154,10 @@ const Projects = () => {
     setFormData({ name: '', description: '', status: 'active' });
   };
 
-  // Filter projects
+  // Filter projects client-side only for search term
   const filteredProjects = projects.filter((project) => {
-    const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         project.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || project.status === filterStatus;
-    const matchesTenant = filterTenant === 'all' || project.tenant_name === filterTenant;
-    return matchesSearch && matchesStatus && matchesTenant;
+    return project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      project.description?.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
   const getStatusColor = (status) => {
@@ -156,19 +172,22 @@ const Projects = () => {
   return (
     <div className="p-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+      <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Projects</h1>
+          <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
+            <FaProjectDiagram className="text-primary-600" />
+            Projects
+          </h1>
           <p className="text-gray-600">{isSuperAdmin ? 'View all tenant projects' : 'Manage your organization\'s projects'}</p>
         </div>
         {!isSuperAdmin && (
-        <button
-          onClick={handleCreateClick}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <FaPlus /> New Project
-        </button>)}
-      </div> 
+          <button
+            onClick={handleCreateClick}
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <FaPlus /> New Project
+          </button>)}
+      </div>
 
       {/* Search and Filter */}
       <div className="mb-6 flex flex-col md:flex-row gap-4">
@@ -194,7 +213,7 @@ const Projects = () => {
           >
             <option value="all">All Tenants</option>
             {tenants.map((tenant) => (
-              <option key={tenant.id} value={tenant.name}>
+              <option key={tenant.id} value={tenant.id}>
                 {tenant.name}
               </option>
             ))}
@@ -228,7 +247,7 @@ const Projects = () => {
               ? 'Try adjusting your search or filters'
               : 'Get started by creating your first project'}
           </p>
-          {!searchTerm && filterStatus === 'all' && (
+          {!searchTerm && filterStatus === 'all' && !isSuperAdmin && (
             <button
               onClick={handleCreateClick}
               className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
@@ -238,61 +257,96 @@ const Projects = () => {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProjects.map((project) => (
-            <div
-              key={project.id}
-              className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden"
-            >
-              <Link to={`/projects/${project.id}`} className="block p-6">
-                <h3 className="text-xl font-bold text-gray-800 mb-2 hover:text-blue-600 transition-colors">
-                  {project.name}
-                </h3>
-                {/* ADD THIS: Show tenant info for Super Admin */}
-                {user?.role === 'super_admin' && project.tenant_name && (
-                  <div className="mb-2 flex items-center gap-2">
-                    <span className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full font-medium">
-                      🏢 {project.tenant_name}
-                    </span>
-                    <span className="text-xs text-gray-500 font-mono">
-                      {project.tenant_subdomain}
-                    </span>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {filteredProjects.map((project) => (
+              <div
+                key={project.id}
+                className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden flex flex-col"
+              >
+                <Link to={`/projects/${project.id}`} className="block p-6 flex-1">
+                  <h3 className="text-xl font-bold text-gray-800 mb-2 hover:text-blue-600 transition-colors line-clamp-1">
+                    {project.name}
+                  </h3>
+                  {isSuperAdmin && tenants.find(t => t.id === project.tenantId)?.name && (
+                    <div className="mb-2 flex items-center gap-2">
+                      <span className="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full font-medium">
+                        🏢 {tenants.find(t => t.id === project.tenantId)?.name}
+                      </span>
+                    </div>
+                  )}
+                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                    {project.description || 'No description provided'}
+                  </p>
+                  <div className="flex items-center justify-between mb-3 border-b pb-3">
+                    <div className="flex flex-col gap-1">
+                      <span className={`text-xs px-3 py-1 rounded-full font-medium w-max ${getStatusColor(project.status)}`}>
+                        {project.status}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {new Date(project.createdAt).toLocaleDateString('en-GB')}
+                      </span>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="text-sm text-gray-700 font-medium">
+                        {project.taskCount} tasks
+                      </span>
+                      {(project.createdBy?.fullName) && (
+                        <span className="text-xs text-gray-500 line-clamp-1">
+                          By: {project.createdBy?.fullName}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                )}
-                <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                  {project.description || 'No description provided'}
-                </p>
-                <div className="flex items-center justify-between">
-                  <span className={`text-xs px-3 py-1 rounded-full font-medium ${getStatusColor(project.status)}`}>
-                    {project.status}
-                  </span>
-                  {isSuperAdmin && (<span className="text-sm text-gray-500">
-                    {project.total_tasks || 0} tasks
-                  </span>)}
-                </div>
-              </Link>
-              
-              {/* Action Buttons */}
-              { !isSuperAdmin && (
-              <div className="px-6 py-3 bg-gray-50 border-t flex justify-end gap-2">
-                <button
-                  onClick={() => handleEditClick(project)}
-                  className="text-blue-600 hover:text-blue-700 p-2"
-                  title="Edit project"
-                >
-                  <FaEdit />
-                </button>
-                <button
-                  onClick={() => handleDelete(project.id, project.name)}
-                  className="text-red-600 hover:text-red-700 p-2"
-                  title="Delete project"
-                >
-                  <FaTrash />
-                </button>
-              </div> )}
+                </Link>
+
+                {/* Action Buttons */}
+                {!isSuperAdmin && (
+                  <div className="px-6 py-3 bg-gray-50 border-t flex justify-end gap-2 mt-auto">
+                    <button
+                      onClick={() => handleEditClick(project)}
+                      className="text-blue-600 hover:text-blue-700 p-2"
+                      title="Edit project"
+                    >
+                      <FaEdit />
+                    </button>
+                    {user?.role === 'tenant_admin' && (
+                      <button
+                        onClick={() => handleDelete(project.id, project.name)}
+                        className="text-red-600 hover:text-red-700 p-2"
+                        title="Delete project"
+                      >
+                        <FaTrash />
+                      </button>
+                    )}
+                  </div>)}
+              </div>
+            ))}
+          </div>
+
+          {/* Pagination Controls */}
+          <div className="bg-white rounded-lg shadow-sm px-6 py-4 flex items-center justify-between border border-gray-100">
+            <div className="text-sm text-gray-600">
+              Showing page <span className="font-semibold text-gray-900">{currentPage}</span> of <span className="font-semibold text-gray-900">{totalPages}</span>
             </div>
-          ))}
-        </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Create/Edit Modal */}

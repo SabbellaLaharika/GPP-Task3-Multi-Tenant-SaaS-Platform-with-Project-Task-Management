@@ -35,7 +35,7 @@ const Settings = () => {
     maxProjects: '',
     status: ''
   }
-  
+
   const [formData, setFormData] = useState(emptyForm);
 
   useEffect(() => {
@@ -45,7 +45,7 @@ const Settings = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      
+
       if (isSuperAdmin) {
         // Super admin sees all tenants
         const response = await tenantService.getAll({ page: 1, limit: 100 });
@@ -96,35 +96,35 @@ const Settings = () => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
 
-  if (
-    name === 'subscriptionPlan' &&
-    isSuperAdmin &&
-    SUBSCRIPTION_LIMITS[value]
-  ) {
-    const limits = SUBSCRIPTION_LIMITS[value];
+    if (
+      name === 'subscriptionPlan' &&
+      isSuperAdmin &&
+      SUBSCRIPTION_LIMITS[value]
+    ) {
+      const limits = SUBSCRIPTION_LIMITS[value];
+      setFormData((prev) => ({
+        ...prev,
+        subscriptionPlan: value,
+        maxUsers: limits.max_users,
+        maxProjects: limits.max_projects
+      }));
+      return;
+    }
+
     setFormData((prev) => ({
       ...prev,
-      subscriptionPlan: value,
-      maxUsers: limits.max_users,
-      maxProjects: limits.max_projects
+      [name]: value
     }));
-    return;
-  }
-
-  setFormData((prev) => ({
-    ...prev,
-    [name]: value
-  }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     try {
       setSaving(true);
-      
+
       const tenantId = isSuperAdmin ? selectedTenant?.id : user.tenantId;
-      
+
       if (!tenantId) {
         toast.error('Please select a tenant');
         return;
@@ -133,9 +133,9 @@ const Settings = () => {
       console.log('Updating tenant:', tenantId, formData);
       await tenantService.update(tenantId, {
         name: formData.name,
-        subscription_plan: formData.subscriptionPlan,
-        max_users: parseInt(formData.maxUsers),
-        max_projects: parseInt(formData.maxProjects),
+        subscriptionPlan: formData.subscriptionPlan,
+        maxUsers: parseInt(formData.maxUsers),
+        maxProjects: parseInt(formData.maxProjects),
         status: formData.status
       });
 
@@ -186,7 +186,7 @@ const Settings = () => {
           </h1>
         </div>
         <p className="text-gray-600">
-          {isSuperAdmin 
+          {isSuperAdmin
             ? 'Manage all organization settings across the system'
             : 'Manage your organization settings and configuration'
           }
@@ -195,24 +195,23 @@ const Settings = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Super Admin: Tenant Selector */}
-        {isSuperAdmin && !selectedTenant &&(
+        {isSuperAdmin && !selectedTenant && (
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
                 <FaBuilding className="text-purple-600" />
                 Select Organization
               </h2>
-              
+
               <div className="space-y-2 max-h-[600px] overflow-y-auto">
                 {allTenants.map((tenant) => (
                   <button
                     key={tenant.id}
                     onClick={() => handleTenantSelect(tenant.id)}
-                    className={`w-full text-left p-4 rounded-lg border-2 transition-all ${
-                      selectedTenant?.id === tenant.id
-                        ? 'border-purple-500 bg-purple-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
+                    className={`w-full text-left p-4 rounded-lg border-2 transition-all ${selectedTenant?.id === tenant.id
+                      ? 'border-purple-500 bg-purple-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                      }`}
                   >
                     <div className="flex items-center gap-3">
                       <div className="flex-shrink-0 h-10 w-10 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full flex items-center justify-center">
@@ -363,10 +362,10 @@ const Settings = () => {
                         <p className="text-sm text-gray-600 mb-2">Users</p>
                         <div className="flex items-center gap-2">
                           <div className="flex-1 bg-gray-200 rounded-full h-2">
-                            <div 
-                              className="bg-blue-500 h-2 rounded-full" 
-                              style={{ 
-                                width: `${((selectedTenant || tenantData).stats.totalUsers / formData.maxUsers) * 100}%` 
+                            <div
+                              className="bg-blue-500 h-2 rounded-full"
+                              style={{
+                                width: `${((selectedTenant || tenantData).stats.totalUsers / formData.maxUsers) * 100}%`
                               }}
                             ></div>
                           </div>
@@ -379,10 +378,10 @@ const Settings = () => {
                         <p className="text-sm text-gray-600 mb-2">Projects</p>
                         <div className="flex items-center gap-2">
                           <div className="flex-1 bg-gray-200 rounded-full h-2">
-                            <div 
-                              className="bg-purple-500 h-2 rounded-full" 
-                              style={{ 
-                                width: `${((selectedTenant || tenantData).stats.totalProjects / formData.maxProjects) * 100}%` 
+                            <div
+                              className="bg-purple-500 h-2 rounded-full"
+                              style={{
+                                width: `${((selectedTenant || tenantData).stats.totalProjects / formData.maxProjects) * 100}%`
                               }}
                             ></div>
                           </div>
@@ -415,7 +414,7 @@ const Settings = () => {
                 {isSuperAdmin ? 'Select an Organization' : 'No Data Available'}
               </h3>
               <p className="text-gray-600">
-                {isSuperAdmin 
+                {isSuperAdmin
                   ? 'Choose an organization from the list to manage its settings'
                   : 'Unable to load organization data'
                 }

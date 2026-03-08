@@ -1,45 +1,67 @@
+
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { FiMail, FiLock, FiUser, FiGlobe } from 'react-icons/fi';
-import { FaUserPlus,FaBuilding } from 'react-icons/fa';
+import { FiMail, FiLock, FiUser, FiGlobe, FiEye, FiEyeOff } from 'react-icons/fi';
+import { FaUserPlus, FaBuilding } from 'react-icons/fa';
 import Input from '../components/Common/Input';
 import Button from '../components/Common/Button';
 import toast from 'react-hot-toast';
+import { getErrorMessage } from '../utils/helpers';
 
 const Register = () => {
   const navigate = useNavigate();
   const { register } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
     tenantName: '',
     subdomain: '',
     adminEmail: '',
     adminPassword: '',
+    confirmPassword: '',
     adminFullName: '',
+    agreedToTerms: false,
   });
 
   const handleChange = (e) => {
-    let value = e.target.value;
-    if (e.target.name === 'subdomain') {
-      value = value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+    const { name, value, type, checked } = e.target;
+    let newValue = type === 'checkbox' ? checked : value;
+
+    if (name === 'subdomain') {
+      newValue = newValue.toLowerCase().replace(/[^a-z0-9-]/g, '');
     }
-    setFormData({ ...formData, [e.target.name]: value });
+
+    setFormData({ ...formData, [name]: newValue });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (formData.adminPassword !== formData.confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+    if (!formData.agreedToTerms) {
+      toast.error('You must agree to the Terms & Conditions');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      await register(formData);
+      const { confirmPassword, agreedToTerms, ...apiData } = formData;
+      await register(apiData);
       navigate('/login');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Registration failed');
+      toast.error(getErrorMessage(error, 'Registration failed'));
     } finally {
       setLoading(false);
     }
   };
+
+  const togglePasswordVisibility = () => setShowPassword(!showPassword);
+  const toggleConfirmPasswordVisibility = () => setShowConfirmPassword(!showConfirmPassword);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-secondary-500 via-secondary-600 to-primary-600 flex items-center justify-center px-4 py-12">
@@ -99,16 +121,59 @@ const Register = () => {
               required
             />
 
-            <Input
-              label="Password"
-              name="adminPassword"
-              type="password"
-              value={formData.adminPassword}
-              onChange={handleChange}
-              placeholder="Min. 8 characters"
-              icon={FiLock}
-              required
-            />
+            <div className="relative">
+              <Input
+                label="Password"
+                name="adminPassword"
+                type={showPassword ? "text" : "password"}
+                value={formData.adminPassword}
+                onChange={handleChange}
+                placeholder="Min. 8 characters"
+                icon={FiLock}
+                required
+              />
+              <button
+                type="button"
+                onClick={togglePasswordVisibility}
+                className="absolute right-3 top-[34px] text-gray-500 hover:text-gray-700 focus:outline-none"
+              >
+                {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+              </button>
+            </div>
+
+            <div className="relative">
+              <Input
+                label="Confirm Password"
+                name="confirmPassword"
+                type={showConfirmPassword ? "text" : "password"}
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                placeholder="Repeat password"
+                icon={FiLock}
+                required
+              />
+              <button
+                type="button"
+                onClick={toggleConfirmPasswordVisibility}
+                className="absolute right-3 top-[34px] text-gray-500 hover:text-gray-700 focus:outline-none"
+              >
+                {showConfirmPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+              </button>
+            </div>
+
+            <div className="flex items-center">
+              <input
+                id="agreedToTerms"
+                name="agreedToTerms"
+                type="checkbox"
+                checked={formData.agreedToTerms}
+                onChange={handleChange}
+                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+              />
+              <label htmlFor="agreedToTerms" className="ml-2 block text-sm text-gray-900">
+                I agree to the <a href="#" className="text-primary-600 hover:underline">Terms & Conditions</a>
+              </label>
+            </div>
 
             <Button
               type="submit"

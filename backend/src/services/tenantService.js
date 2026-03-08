@@ -110,8 +110,8 @@ const updateTenant = async (tenantId, updateData, userRole, requestingUserId) =>
   };
 
   // Build dynamic UPDATE query
-  const fields = Object.keys(updateData).map(field => fieldsMapping[field]);
-  const values = Object.values(updateData);
+  const fields = Object.keys(filteredData).map(field => fieldsMapping[field]);
+  const values = Object.values(filteredData);
 
   // Build SET clause: field1 = $1, field2 = $2, ...
   const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');

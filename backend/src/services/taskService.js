@@ -1,7 +1,6 @@
 const { v4: uuidv4 } = require('uuid');
 const { pool } = require('../db/pool');
 const logger = require('../utils/logger');
-const { get } = require('../routes/superAdminRoutes');
 
 const createTask = async (projectId, taskData, userId) => {
   try {
@@ -99,29 +98,44 @@ const createTask = async (projectId, taskData, userId) => {
 
 const listProjectTasks = async (projectId, tenantId, userRole, filters = {}) => {
 
-
   try {
-    let { page = 1, limit = 50, status, assignedTo, priority, search } = filters;
+    let { page = 1, limit = 50, status, assignedTo, priority, search, tenantId: filterTenantId } = filters;
 
     page = parseInt(page) || 1;
     limit = Math.min(parseInt(limit) || 50, 100);
+    const isAllProjects = projectId === 'all';
     const offset = (page - 1) * limit;
 
-    const projectResult = await pool.query(
-      'SELECT id FROM projects WHERE id = $1',
-      [projectId]
-    );
+    if (!isAllProjects) {
+      const projectResult = await pool.query(
+        'SELECT id FROM projects WHERE id = $1',
+        [projectId]
+      );
 
-    if (projectResult.rows.length == 0) {
-      throw new Error("Project not found or invalid project id provided");
+      if (projectResult.rows.length === 0) {
+        throw new Error("Project not found or invalid project id provided");
+      }
     }
+
     // 1. Build dynamic filters
-    const conditions = ['t.project_id = $1'];
-    const params = [projectId];
+    const conditions = [];
+    const params = [];
+
+    if (!isAllProjects) {
+      conditions.push('t.project_id = $1');
+      params.push(projectId);
+    }
 
     // Security: Only super_admin bypasses tenant isolation
-    if (userRole !== 'super_admin') {
-      conditions.push('t.tenant_id = $2');
+    if (userRole === 'super_admin') {
+      if (filterTenantId && filterTenantId !== 'all') {
+        const pIndex = params.length + 1;
+        conditions.push(`t.tenant_id = $${pIndex}`);
+        params.push(filterTenantId);
+      }
+    } else {
+      const pIndex = params.length + 1;
+      conditions.push(`t.tenant_id = $${pIndex}`);
       params.push(tenantId);
     }
 
@@ -133,8 +147,12 @@ const listProjectTasks = async (projectId, tenantId, userRole, filters = {}) => 
     }
 
     if (assignedTo) {
-      conditions.push(`t.assigned_to = $${paramIndex++}`);
-      params.push(assignedTo);
+      if (assignedTo === 'null') {
+        conditions.push(`t.assigned_to IS NULL`);
+      } else {
+        conditions.push(`t.assigned_to = $${paramIndex++}`);
+        params.push(assignedTo);
+      }
     }
 
     if (priority) {
@@ -147,14 +165,15 @@ const listProjectTasks = async (projectId, tenantId, userRole, filters = {}) => 
       params.push(`%${search}%`);
     }
 
-    const whereClause = conditions.join(' AND ');
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
     // 2. Main query
     const query = `
-      SELECT t.*, u.full_name as assigned_to_name, u.email as assigned_to_email
+      SELECT t.*, u.full_name as assigned_to_name, u.email as assigned_to_email, p.name as project_name
       FROM tasks t
       LEFT JOIN users u ON t.assigned_to = u.id
-      WHERE ${whereClause}
+      LEFT JOIN projects p ON t.project_id = p.id
+      ${whereClause}
       ORDER BY 
         CASE t.priority 
           WHEN 'high' THEN 1 
@@ -167,11 +186,12 @@ const listProjectTasks = async (projectId, tenantId, userRole, filters = {}) => 
     const result = await pool.query(query, [...params, limit, offset]);
 
     // 3. Count query (re-uses the same whereClause and params)
-    const countQuery = `SELECT COUNT(*) FROM tasks t WHERE ${whereClause}`;
+    const countQuery = `SELECT COUNT(*) FROM tasks t ${whereClause}`;
     const countResult = await pool.query(countQuery, params);
     const total = parseInt(countResult.rows[0].count);
     const tasks = result.rows.map((task) => ({
       id: task.id,
+      projectId: task.project_id,
       title: task.title,
       description: task.description,
       status: task.status,
@@ -203,8 +223,12 @@ const listProjectTasks = async (projectId, tenantId, userRole, filters = {}) => 
   }
 };
 
-const updateTaskStatus = async (taskId, status, tenantId, userId) => {
+const updateTaskStatus = async (taskId, status, tenantId, userId, userRole) => {
   try {
+    // Super Admin is view-only
+    if (userRole === 'super_admin') {
+      throw new Error('Unauthorized access: Super Admin is view-only');
+    }
 
     const requirements = await pool.query(
       `SELECT tenant_id FROM tasks WHERE id = $1`, [taskId]
@@ -256,9 +280,13 @@ const updateTaskStatus = async (taskId, status, tenantId, userId) => {
   }
 };
 
-const updateTask = async (taskId, updateData, tenantId, userId) => {
+const updateTask = async (taskId, updateData, tenantId, userId, userRole) => {
   const client = await pool.connect();
   try {
+    // Super Admin is view-only
+    if (userRole === 'super_admin') {
+      throw new Error('Unauthorized access: Super Admin is view-only');
+    }
     // 1. Initial Validation
     const { rows: taskRows } = await client.query('SELECT tenant_id FROM tasks WHERE id = $1', [taskId]);
     if (taskRows.length === 0) throw new Error('Task not found');
@@ -352,8 +380,16 @@ const updateTask = async (taskId, updateData, tenantId, userId) => {
 };
 
 
-const deleteTask = async (taskId, tenantId, userId) => {
+const deleteTask = async (taskId, tenantId, userId, userRole) => {
   try {
+    // ONLY tenant_admin can delete
+    if (userRole === 'super_admin') {
+      throw new Error('Unauthorized access: Super Admin is view-only');
+    }
+
+    if (userRole !== 'tenant_admin') {
+      throw new Error('Unauthorized access: Only Tenant Admins can delete tasks');
+    }
 
     const { rows: taskRows } = await pool.query('SELECT tenant_id FROM tasks WHERE id = $1', [taskId]);
     if (taskRows.length === 0) throw new Error('Task not found');

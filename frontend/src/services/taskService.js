@@ -1,18 +1,10 @@
 import api from './api';
 
 const taskService = {
+
   getAllByProject: async (projectId, params = {}) => {
     const response = await api.get(`/projects/${projectId}/tasks`, { params });
     return response.data;
-  },
-
-  getUserTasks: async (userId) => {
-    try {
-      const response = await api.get(`/users/${userId}/tasks`);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error.message;
-    }
   },
 
   create: async (projectId, data) => {

@@ -1,14 +1,16 @@
+
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { 
-  FaTachometerAlt, 
-  FaProjectDiagram, 
-  FaUsers, 
+import {
+  FaTachometerAlt,
+  FaProjectDiagram,
+  FaUsers,
   FaBuilding,
   FaCrown,
   FaUser,
-  FaTimes
+  FaTimes,
+  FaTasks
 } from 'react-icons/fa';
 
 const Sidebar = ({ isOpen, onClose }) => {
@@ -21,26 +23,27 @@ const Sidebar = ({ isOpen, onClose }) => {
 
   // Define nav items based on role
   const getNavItems = () => {
-    if (isSuperAdmin) {
-      return [
-        { path: '/dashboard', label: 'Dashboard', icon: FaTachometerAlt },
-        { path: '/projects', label: 'Projects', icon: FaProjectDiagram },
-        { path: '/tenants', label: 'Tenants', icon: FaBuilding }
-      ];
-    }
-    
-    if (isTenantAdmin) {
-      return [
-        { path: '/dashboard', label: 'Dashboard', icon: FaTachometerAlt },
-        { path: '/projects', label: 'Projects', icon: FaProjectDiagram },
-        { path: '/users', label: 'Users', icon: FaUsers }
-      ];
-    }
-    
-    // Regular users
-    return [
-      { path: '/dashboard', label: 'Dashboard', icon: FaTachometerAlt }
+    const items = [
+      { path: '/dashboard', label: 'Dashboard', icon: FaTachometerAlt },
+      { path: '/projects', label: 'Projects', icon: FaProjectDiagram },
     ];
+
+    // Tasks is for both Tenant Admin and Super Admin
+    if (isTenantAdmin || isSuperAdmin) {
+      items.push({ path: '/tasks', label: 'Tasks', icon: FaTasks });
+    }
+
+    // Users is for Tenant Admin
+    if (isTenantAdmin) {
+      items.push({ path: '/users', label: 'Users', icon: FaUsers });
+    }
+
+    // Tenants is for Super Admin
+    if (isSuperAdmin) {
+      items.push({ path: '/tenants', label: 'Tenants', icon: FaBuilding });
+    }
+
+    return items;
   };
 
   const navItems = getNavItems();
@@ -54,7 +57,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         </div>
       );
     }
-    
+
     if (isTenantAdmin) {
       return (
         <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-100 to-purple-50 border border-purple-200 rounded-lg">
@@ -63,7 +66,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         </div>
       );
     }
-    
+
     return (
       <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-blue-100 to-blue-50 border border-blue-200 rounded-lg">
         <FaUser className="text-blue-600" />
@@ -82,14 +85,14 @@ const Sidebar = ({ isOpen, onClose }) => {
     <>
       {/* Mobile Overlay */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
           onClick={onClose}
         ></div>
       )}
 
       {/* Sidebar */}
-      <aside 
+      <aside
         className={`
           fixed lg:static inset-y-0 left-0 z-50
           w-64 bg-white border-r border-gray-200 
@@ -134,17 +137,16 @@ const Sidebar = ({ isOpen, onClose }) => {
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.path);
-              
+
               return (
                 <Link
                   key={item.path}
                   to={item.path}
                   onClick={handleLinkClick}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
-                    active
-                      ? 'bg-blue-50 text-blue-600 font-semibold shadow-sm'
-                      : 'text-gray-700 hover:bg-gray-50 hover:text-blue-600'
-                  }`}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${active
+                    ? 'bg-blue-50 text-blue-600 font-semibold shadow-sm'
+                    : 'text-gray-700 hover:bg-gray-50 hover:text-blue-600'
+                    }`}
                 >
                   <Icon className={`text-lg ${active ? 'text-blue-600' : 'text-gray-400'}`} />
                   <span className="text-sm">{item.label}</span>
@@ -164,7 +166,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             <p>Version 1.0.0</p>
           </div>
         </div>
-      </aside>
+      </aside >
     </>
   );
 };

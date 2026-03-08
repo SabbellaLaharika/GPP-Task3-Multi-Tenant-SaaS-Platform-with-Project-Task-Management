@@ -31,6 +31,8 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      localStorage.removeItem('tenantId');
+      localStorage.removeItem('subdomain');
       window.location.href = '/login';
       toast.error('Session expired. Please login again.');
     }

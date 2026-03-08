@@ -27,7 +27,7 @@ const addUserToTenant = async (req, res, next) => {
 
 const listTenantUsers = async (req, res, next) => {
   try {
-    if (req.user.role === 'super_admin' || req.user.tenantId !== req.params.tenantId) {
+    if (req.user.role !== 'super_admin' && req.user.tenantId !== req.params.tenantId) {
       return res.status(403).json({ success: false, message: 'Forbidden: You do not have permission' });
     }
     const result = await userService.listTenantUsers(req.params.tenantId, req.query);

@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { FaEnvelope, FaLock, FaBuilding, FaSignInAlt } from 'react-icons/fa';
+import { getErrorMessage } from '../utils/helpers';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -23,13 +24,13 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     try {
       setLoading(true);
       await login(formData);
       navigate('/dashboard');
     } catch (error) {
-      toast.error(error.message || 'Login failed');
+      toast.error(getErrorMessage(error, 'Login failed'));
       console.error('Login error:', error);
     } finally {
       setLoading(false);
@@ -113,6 +114,19 @@ const Login = () => {
               <p className="mt-1 text-xs text-gray-500">
                 Enter your organization's subdomain (e.g., "demo" or "system")
               </p>
+            </div>
+
+            {/* Remember Me */}
+            <div className="flex items-center">
+              <input
+                id="rememberMe"
+                name="rememberMe"
+                type="checkbox"
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="rememberMe" className="ml-2 block text-sm text-gray-900">
+                Remember me
+              </label>
             </div>
 
             {/* Submit Button */}

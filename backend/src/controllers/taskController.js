@@ -1,4 +1,3 @@
-const e = require('express');
 const taskService = require('../services/taskService');
 
 const createTask = async (req, res, next) => {
@@ -6,7 +5,7 @@ const createTask = async (req, res, next) => {
     const result = await taskService.createTask(
       req.params.projectId,
       req.body,
-      req.user.id // audit
+      req.user.id
     );
     res.status(201).json(result);
   } catch (error) {
@@ -43,7 +42,8 @@ const updateTaskStatus = async (req, res, next) => {
       req.params.taskId,
       req.body.status,
       req.tenantId,
-      req.user.id // audit
+      req.user.id,
+      req.user.role
     );
     res.status(200).json(result);
   } catch (error) {
@@ -63,7 +63,8 @@ const updateTask = async (req, res, next) => {
       req.params.taskId,
       req.body,
       req.tenantId,
-      req.user.id // audit
+      req.user.id,
+      req.user.role
     );
     res.status(200).json(result);
   } catch (error) {
@@ -85,9 +86,9 @@ const deleteTask = async (req, res) => {
     await taskService.deleteTask(
       req.params.taskId,
       req.tenantId,
-      req.user.id // audit
+      req.user.id,
+      req.user.role
     );
-
     res.status(200).json({
       success: true,
       message: 'Task deleted successfully'
@@ -110,17 +111,12 @@ const deleteTask = async (req, res) => {
 const getUserTasks = async (req, res) => {
   try {
     const { id } = req.params;
-
-    const tasks = await userService.getUserTasks(id);
-
+    const tasks = await taskService.getUserTasks(id);
     res.status(200).json({
       success: true,
-      data: {
-        tasks
-      }
+      data: { tasks }
     });
   } catch (error) {
-    console.error('Get user tasks error:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to fetch user tasks',

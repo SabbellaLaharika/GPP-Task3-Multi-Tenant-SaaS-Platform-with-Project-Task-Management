@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import userService from '../services/userService';
 import toast from 'react-hot-toast';
 import { FaUser, FaSave } from 'react-icons/fa';
+import { getErrorMessage } from '../utils/helpers';
 
 const Profile = () => {
   const { user, checkAuth } = useAuth();
@@ -30,7 +31,7 @@ const Profile = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     try {
       setLoading(true);
       await userService.update(user.id, {
@@ -39,7 +40,7 @@ const Profile = () => {
       await checkAuth();
       toast.success('Profile updated successfully');
     } catch (error) {
-      toast.error('Failed to update profile');
+      toast.error(getErrorMessage(error, 'Failed to update profile'));
       console.error(error);
     } finally {
       setLoading(false);

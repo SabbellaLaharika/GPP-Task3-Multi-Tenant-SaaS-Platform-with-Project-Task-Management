@@ -48,5 +48,16 @@ export const getPriorityBadgeColor = (priority) => {
     medium: 'bg-blue-100 text-blue-800',
     high: 'bg-red-100 text-red-800',
   };
-  return colors[priority] || 'bg-gray-100 text-gray-800';
+};
+
+export const getErrorMessage = (error, defaultMessage = 'Something went wrong') => {
+  const responseData = error.response?.data;
+
+  // Check if the API returned a specific validation error array
+  if (responseData?.errors && Array.isArray(responseData.errors) && responseData.errors.length > 0) {
+    return responseData.errors[0].message;
+  }
+
+  // Fallback to the top-level message or the default message
+  return responseData?.message || error.message || defaultMessage;
 };
