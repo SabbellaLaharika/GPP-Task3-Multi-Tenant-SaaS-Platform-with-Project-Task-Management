@@ -9,7 +9,7 @@ A comprehensive multi-tenant Software-as-a-Service (SaaS) platform with complete
 
 ## 🎥 Project Demo
 
-[![Watch the project demo on YouTube](https://img.youtube.com/vi/RoXgAkotIO4/hqdefault.jpg)](https://youtu.be/RoXgAkotIO4)
+[![Watch the project demo on YouTube](https://img.youtube.com/vi/RoXgAkotIO4/maxresdefault.jpg)](https://youtu.be/RoXgAkotIO4)
 
 ---
 
